@@ -1,2 +1,2 @@
 // Public API for infrastructure layer
-export {};
+export * from './database';

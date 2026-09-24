@@ -1,4 +1,5 @@
 import React from 'react';
+import { DatabaseStatusCard } from '@/features/dashboard';
 
 export default function DashboardPage() {
   return (
@@ -39,11 +40,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Placeholder Content Area */}
-      <div className="p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-center text-slate-400 dark:text-zinc-500 shadow-xs">
-        <p className="text-sm font-medium">Step 4 Application Shell Active</p>
-        <p className="text-xs mt-1">Domain business logic and Dexie persistence will be attached in subsequent steps.</p>
-      </div>
+      {/* Step 5 Foundation Live Diagnostic Verification */}
+      <DatabaseStatusCard />
     </div>
   );
 }
