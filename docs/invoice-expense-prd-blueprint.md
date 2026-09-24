@@ -429,15 +429,19 @@ This creates unrelated global folders that become dumping grounds.
 src/
 ├── features/
 │   ├── invoices/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── schemas/
-│   │   ├── types/
-│   │   ├── utils/
-│   │   ├── services/
+│   │   ├── _components/
+│   │   ├── _hooks/
+│   │   ├── _schemas/
+│   │   ├── _types/
+│   │   ├── _utils/
+│   │   ├── _services/
 │   │   └── index.ts
 │   │
 │   ├── expenses/
+│   │   ├── _components/
+│   │   ├── _hooks/
+│   │   ├── _services/
+│   │   └── ...
 │   ├── customers/
 │   ├── products/
 │   ├── reports/
@@ -446,11 +450,11 @@ src/
 │   └── license/
 │
 ├── shared/
-│   ├── components/
-│   ├── hooks/
-│   ├── utils/
-│   ├── types/
-│   └── constants/
+│   ├── _components/
+│   ├── _hooks/
+│   ├── _utils/
+│   ├── _types/
+│   └── _constants/
 │
 ├── infrastructure/
 │   ├── database/
@@ -461,18 +465,34 @@ src/
 └── app/
 ```
 
+### Next.js Private Folder Convention (`_`)
+
+Setiap folder internal pendukung pada modul/fitur (seperti components, hooks, utils, services, schemas, types) **wajib diawali dengan garis bawah (`_`)**, contohnya:
+- `_components/`
+- `_hooks/`
+- `_utils/`
+- `_services/`
+- `_schemas/`
+- `_types/`
+
+**Tujuan:**
+Next.js App Router secara default memperlakukan folder berawalan `_` sebagai **Private Folders**. Dengan aturan ini:
+1. Folder dan file di dalamnya **tidak akan pernah dianggap atau di-route sebagai URL path** oleh Next.js, baik ketika diletakkan di dalam modul `src/features/` maupun jika di-collocate di dalam direktori `src/app/`.
+2. Mencegah konflik atau tabrakan rute (routing collisions) yang tidak disengaja.
+3. Mempertegas batas bahwa file-file tersebut merupakan implementasi internal modul.
+
 ### Placement rule
 
 If something is only used by one feature:
 
 ``` text
-features/invoices/...
+features/invoices/_components/...
 ```
 
 If it is genuinely reused by multiple unrelated features:
 
 ``` text
-shared/...
+shared/_components/...
 ```
 
 If it is infrastructure-related:
@@ -494,8 +514,17 @@ project-root/
 │   ├── (customer)/
 │   │   ├── layout.tsx
 │   │   ├── dashboard/
+│   │   │   └── page.tsx
 │   │   ├── invoices/
+│   │   │   ├── page.tsx
+│   │   │   ├── [id]/
+│   │   │   │   └── page.tsx
+│   │   │   ├── _components/         <-- Private folder (tidak terbaca sbg route)
+│   │   │   ├── _hooks/              <-- Private folder
+│   │   │   └── _utils/              <-- Private folder
 │   │   ├── expenses/
+│   │   │   ├── page.tsx
+│   │   │   └── _components/
 │   │   ├── customers/
 │   │   ├── products/
 │   │   ├── reports/
@@ -504,19 +533,36 @@ project-root/
 │   ├── (admin)/
 │   │   └── sk-11312301239/
 │   │       ├── login/
+│   │       │   └── page.tsx
 │   │       ├── dashboard/
+│   │       │   └── page.tsx
 │   │       ├── licenses/
+│   │       │   ├── page.tsx
+│   │       │   └── _components/
 │   │       └── layout.tsx
 │   │
 │   └── api/
 │       └── license/
 │           ├── activate/
+│           │   └── route.ts
 │           └── validate/
+│               └── route.ts
 │
-├── features/
+├── features/                        (modul domain terisolasi)
 │   ├── dashboard/
 │   ├── invoices/
+│   │   ├── _components/
+│   │   ├── _hooks/
+│   │   ├── _schemas/
+│   │   ├── _types/
+│   │   ├── _utils/
+│   │   ├── _services/
+│   │   └── index.ts
 │   ├── expenses/
+│   │   ├── _components/
+│   │   ├── _hooks/
+│   │   ├── _services/
+│   │   └── ...
 │   ├── customers/
 │   ├── products/
 │   ├── reports/
@@ -525,11 +571,11 @@ project-root/
 │   └── license/
 │
 ├── shared/
-│   ├── components/
-│   ├── hooks/
-│   ├── utils/
-│   ├── types/
-│   └── constants/
+│   ├── _components/
+│   ├── _hooks/
+│   ├── _utils/
+│   ├── _types/
+│   └── _constants/
 │
 ├── infrastructure/
 │   ├── database/
@@ -551,7 +597,7 @@ project-root/
 └── README.md
 ```
 
-The exact structure may evolve, but the architectural rules must remain.
+The exact structure may evolve, but the architectural rules must remain: **semua folder pembantu internal (components, hooks, utils, services) wajib diawali dengan tanda `_` agar aman dari routing Next.js App Router.**
 
 ------------------------------------------------------------------------
 
