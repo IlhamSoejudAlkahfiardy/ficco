@@ -1,7 +1,7 @@
 # Rangkuman Perkembangan Proyek Ficco — Session Summary
 
 > **Dokumen Sumber Kebenaran (Source of Truth):** [`docs/invoice-expense-prd-blueprint.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md)  
-> **Status:** Step 1 sampai Step 7 Selesai  
+> **Status:** Step 1 sampai Step 8 Selesai  
 > **Arsitektur:** Local-First / Zero-Knowledge Server (IndexedDB via Dexie)  
 > **Framework:** Next.js (App Router) + TypeScript + Tailwind CSS + Zustand + React Hook Form + Zod  
 
@@ -171,7 +171,35 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 9. Status Saat Ini & Langkah Berikutnya
+## 9. Pengerjaan Step 8 — Implement Product/Service Management
+
+* **Tujuan:** Membangun manajemen katalog produk dan layanan (CRUD) dengan penentuan harga satuan, kode SKU, satuan unit terstandarisasi, tarif pajak PPN default, toggle status aktif/non-aktif, serta kesiapan referensi baris item faktur (*invoice items*) tersimpan lokal di IndexedDB.
+* **Implementasi:**
+  - **Definisi Tipe Data & Skema Validasi:**
+    - [`features/products/_types/product.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_types/product.types.ts): Re-export entitas `Product`, daftar 13 satuan standar ([`COMMON_UNITS`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_types/product.types.ts#L22): `pcs`, `unit`, `jam`, `hari`, `bulan`, `tahun`, `paket`, `sesi`, `proyek`, `mandays`, `kg`, `m`, `box`), `ProductFilterStatus`, `ProductSortBy`, dan `ProductStats`.
+    - [`features/products/_schemas/product.schemas.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_schemas/product.schemas.ts): Validasi berbasis Zod v4 untuk form produk (`name` wajib 1-120 karakter, `sku` opsional maks 50 karakter, `unit` wajib, `price` angka non-negatif, `taxRate` 0-100%, `description` maks 500 karakter, dan boolean `active`).
+  - **Service Layer (Local-First IndexedDB):**
+    - [`features/products/_services/product-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_services/product-service.ts):
+      - `getAll(search, status, sortBy)`: Query pencarian multi-kolom (nama, SKU, deskripsi) via `productRepository`, filter status (`all`, `active`, `inactive`), dan multi-sorting (harga tertinggi/terendah, nama A-Z/Z-A, tanggal penambahan).
+      - `getActiveProducts()`: Query produk aktif yang siap direferensikan pada pembuatan faktur.
+      - `create(data)` & `update(id, data)`: Mengelola ID unik (`prod_...`), normalisasi data (SKU uppercase, unit lowercase), dan ISO timestamp.
+      - `toggleActive(id, currentActive)`: Aksi cepat satu klik untuk mengaktifkan/menonaktifkan item katalog.
+      - `getInvoiceUsageCount(productId)`: Memeriksa apakah produk sudah pernah dipakai pada baris item faktur (`invoiceItems`).
+      - `delete(id)`: Menghapus produk dari Dexie table `products`.
+      - `seedSampleProducts()`: Generator 4 data dummy (pengembangan web, konsultasi UI/UX, maintenance server, lisensi pro) untuk pengujian instan.
+  - **State Management & Custom Hook:**
+    - [`features/products/_hooks/use-products.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_hooks/use-products.ts): Mengelola state reaktif katalog, query pencarian, filter status, pengurutan, modal buat/edit, dialog konfirmasi hapus dengan deteksi relasi faktur, dan aksi toggle status aktif.
+  - **Komponen UI Modular & Responsif:**
+    - [`ProductListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_components/product-list-view.tsx): Tampilan utama katalog dengan 3 kartu metrik statistik (Total Katalog, Produk Aktif, Non-Aktif), bilah pencarian & filter menggunakan `AppSelect`, tabel data desktop berfitur badge unit, format mata uang rupiah (`Rp`), switch badge status interaktif, mobile cards view ramah layar sentuh, serta empty state interaktif.
+    - [`ProductFormModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_components/product-form-modal.tsx): Modal buat/edit produk menggunakan React Hook Form + Zod, terintegrasi dengan `AppSelect` untuk pemilihan satuan unit.
+    - [`ProductDeleteDialog`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/_components/product-delete-dialog.tsx): Konfirmasi hapus yang menampilkan rincian harga serta peringatan jika produk telah digunakan pada faktur yang diterbitkan sebelumnya.
+  - **Routing & Integrasi Halaman:**
+    - [`features/products/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/products/index.ts): Public API barrel export modul produk.
+    - [`app/(customer)/products/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/products/page.tsx): Integrasi langsung me-render `ProductListView`.
+
+---
+
+## 10. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -181,6 +209,8 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 5** | Implement IndexedDB/Dexie foundation (9 Tables, Repositories, Playground) | Selesai | `d0d86f2` |
 | **Step 6** | Implement company/business settings (Profile, Logo, Invoice Defaults) | Selesai | `3e23be8` |
 | **Step 7** | Implement customer management (CRUD Pelanggan, Search, Detail Drawer, Zod Form) | Selesai | Terverifikasi lokal |
-| **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | Terverifikasi lokal |
-| **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Pajak) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | `00dfef8` |
+| **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Satuan, Pajak) | Selesai | Terverifikasi lokal |
+| **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
