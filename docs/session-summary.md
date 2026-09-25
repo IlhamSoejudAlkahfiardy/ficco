@@ -199,7 +199,65 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 10. Status Saat Ini & Langkah Berikutnya
+---
+
+## 10. Pengerjaan Step 9 — Implement Invoice Domain
+
+* **Tujuan:** Membangun lapisan domain dan logika bisnis utama faktur (*invoice domain*) sesuai dengan mandat Blueprint PRD Bagian 9 & 10, mencakup skema data faktur & baris item (*Zod validation*), mesin kalkulasi finansial terpusat (*zero calculation duplication*), mitigasi presisi *floating point*, generator penomoran faktur berurutan tanpa tabrakan (*collision-free sequential numbering*), penentuan status siklus hidup faktur otomatis, serta rangkaian pengujian unit (*unit tests*).
+* **Implementasi:**
+  - **Pembaruan Skema Status Faktur (Database Infrastructure):**
+    - [`infrastructure/database/schema.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/schema.ts): Memperluas tipe `InvoiceStatus` agar mencakup status lengkap: `'draft' | 'sent' | 'pending' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled'` sesuai spesifikasi Bagian 10 PRD Blueprint.
+  - **Tipe Data & Metadata Domain:**
+    - [`features/invoices/_types/invoice.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_types/invoice.types.ts):
+      - Mendefinisikan antarmuka `CalculatedInvoiceItem`, `InvoiceCalculationInput`, `InvoiceCalculationResult`, `InvoiceStatusParams`, dan `InvoicePaymentSummary`.
+      - Menyediakan konfigurasi visual terpusat `INVOICE_STATUS_CONFIG` dengan label, palet warna, badge background, dan deskripsi status dalam Bahasa Indonesia yang ramah mode gelap (*dark mode*) dan terang.
+  - **Skema Validasi Zod v4:**
+    - [`features/invoices/_schemas/invoice.schemas.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_schemas/invoice.schemas.ts):
+      - `invoiceItemSchema`: Memvalidasi deskripsi (1-250 karakter), kuantitas (>= 0.0001), harga satuan (>= 0), diskon item (>= 0), dan tarif pajak (0-100%).
+      - `invoiceSchema`: Memvalidasi nomor faktur unik, ID pelanggan terpilih, format tanggal ISO `YYYY-MM-DD`, diskon faktur, pajak faktur, dan minimal 1 baris item faktur. Dilengkapi aturan `.refine()` untuk memastikan `dueDate >= issueDate` (tanggal jatuh tempo tidak boleh mendahului tanggal penerbitan).
+  - **Mesin Kalkulasi Finansial Terpusat (Pure Calculation Engine):**
+    - [`features/invoices/_utils/invoice-calculations.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-calculations.ts):
+      - **Aturan Bebas Duplikasi:** Seluruh form, preview cetak, detail drawer, PDF, dashboard, dan laporan diwajibkan menggunakan utilitas kalkulasi ini tanpa menuliskan rumus matematika terpisah di komponen UI.
+      - `roundCurrency(amount, decimals = 2)`: Memitigasi ketidakakuratan *floating-point* JavaScript (misal anomali `0.1 + 0.2 = 0.30000000000000004`).
+      - `calculateLineItem()`: Menghitung subtotal item (`qty * unitPrice`), membatasi diskon tidak melebihi subtotal, menghitung nilai pajak item setelah diskon (`taxAmount = afterDiscount * (taxRate / 100)`), dan total item.
+      - `calculateInvoiceTotals()`: Menjumlahkan seluruh baris item, menerapkan diskon faktur global setelah diskon item, menghitung dasar pengenaan pajak (*taxable amount*), pajak global, dan grand total akhir (`subtotal - totalDiscount + totalTax`).
+      - `calculateInvoiceStatus()`: Mengimplementasikan aturan prioritas siklus hidup faktur:
+        1. Faktur berstatus `cancelled` tetap dibatalkan.
+        2. `totalPaid >= total` -> `paid` (Lunas).
+        3. `0 < totalPaid < total` -> `partially_paid` jika belum jatuh tempo, atau `overdue` jika tanggal referensi telah melewati `dueDate`.
+        4. Belum lunas dan tanggal referensi melewati `dueDate` -> `overdue` (Jatuh Tempo).
+        5. Faktur berstatus `draft` tetap draf sampai dipublikasikan.
+        6. Faktur belum lunas dalam masa tenggang -> `sent` atau `pending`.
+      - `calculatePaymentBalance()`: Menghitung total terbayar, sisa tagihan (*remaining balance*), serta flag status pelunasan.
+  - **Generator Penomoran Faktur Berurutan:**
+    - [`features/invoices/_utils/invoice-number-generator.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-number-generator.ts):
+      - `formatInvoiceNumber()`: Memformat pola standar terpadu `PREFIX-YYYY-0001` (contoh: `INV-2026-0001`) dengan padding angka yang dapat dikonfigurasi.
+      - `parseInvoiceNumber()`: Mengekstrak prefix, tahun kalender, dan nomor urut dari format faktur dengan atau tanpa tahun.
+      - `generateNextInvoiceNumber()`: Menginspeksi seluruh riwayat faktur yang ada di IndexedDB pada prefix dan tahun berjalan, mencari nomor urut tertinggi, dan menghasilkan nomor urut berikutnya secara otomatis tanpa resiko nomor ganda/tabrakan.
+  - **Service Domain Transaksional (IndexedDB Local-First):**
+    - [`features/invoices/_services/invoice-domain-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/invoice-domain-service.ts):
+      - `getNextInvoiceNumber(prefixOverride)`: Mengambil konfigurasi default dari `settingsRepository` dan mencocokkan dengan data `invoiceRepository`.
+      - `calculateTotals(input)`: Entry point kalkulasi faktur.
+      - `getFullDetails(id)`: Mengambil faktur, seluruh baris item, data profil pelanggan terkait, dan kalkulasi pembayaran secara paralel.
+      - `refreshStatus(id)`: Memperbarui status faktur secara otomatis saat ada pencatatan pembayaran baru atau saat tanggal jatuh tempo terlampaui.
+      - `createInvoice(formData)`: Memvalidasi data dengan Zod, menghitung seluruh total finansial, menyimpan faktur dan baris item secara atomik via transaksi Dexie `saveWithItems`, serta memperbarui urutan nomor berikutnya di pengaturan perusahaan.
+  - **Rangkaian Pengujian Unit (Unit Tests Suite) & Self-Diagnostics:**
+    - [`features/invoices/_utils/invoice-calculations.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-calculations.test.ts):
+      - Memuat 12 pengujian mandiri yang terbagi ke dalam 5 suite:
+        1. *Suite 1 — Line Item Calculation*: Subtotal dasar, kalkulasi diskon item, kalkulasi pajak setelah diskon, pembatasan diskon maksimal.
+        2. *Suite 2 — Invoice Totals Calculation*: Agregasi multi-item, diskon level faktur, pajak global, mitigasi presisi desimal.
+        3. *Suite 3 — Invoice Status Calculation*: Status lunas/overpaid, cicilan/partially_paid, keterlambatan/overdue, persistensi cancelled, persistensi draft.
+        4. *Suite 4 — Payment Balance Calculation*: Akumulasi riwayat pembayaran dan sisa saldo tagihan.
+        5. *Suite 5 — Invoice Number Generation*: Pemformatan standar, parsing token penomoran, penentuan urutan tanpa tabrakan.
+      - Menghasilkan laporan terstruktur `runInvoiceDomainUnitTests()` (total, passedCount, failedCount, hasil per pengujian).
+    - **Integrasi Self-Diagnostics Otomatis:**
+      - [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan eksekusi pengujian unit domain faktur sebagai langkah ke-7 pada diagnostik sistem lokal di dashboard, memastikan seluruh rumus kalkulasi terverifikasi secara berkala langsung di browser klien.
+  - **Public Module Export:**
+    - [`features/invoices/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/index.ts): Barrel export untuk tipe, skema, utilitas kalkulasi, generator nomor, pengujian, dan domain service.
+
+---
+
+## 11. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -211,6 +269,7 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 7** | Implement customer management (CRUD Pelanggan, Search, Detail Drawer, Zod Form) | Selesai | Terverifikasi lokal |
 | **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | `00dfef8` |
 | **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Satuan, Pajak) | Selesai | Terverifikasi lokal |
-| **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | **Selesai** | Terverifikasi lokal |
+| **Step 10** | Implement invoice creation/edit form (Dynamic line items, customer select, live totals, draft save) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 

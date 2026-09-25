@@ -3,6 +3,7 @@ import { customerRepository } from './repositories/customer-repository';
 import { productRepository } from './repositories/product-repository';
 import { invoiceRepository } from './repositories/invoice-repository';
 import { CURRENT_DB_VERSION } from './migrations';
+import { runInvoiceDomainUnitTests } from '@/features/invoices/_utils/invoice-calculations.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -168,6 +169,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Invoice Transactional Operations',
       passed: invoiceTransPassed && invoiceCleanupPassed,
       message: 'Atomic multi-table transaction and cascading delete verified.',
+    });
+
+    // 7. Test Invoice Domain Unit Tests (Calculations, Status, Numbering)
+    const domainTestSummary = runInvoiceDomainUnitTests();
+    results.push({
+      step: 'Invoice Domain Unit Tests',
+      passed: domainTestSummary.failedCount === 0,
+      message: `${domainTestSummary.passedCount}/${domainTestSummary.total} unit tests passed (Calculations, Status, Precision, & Numbering).`,
     });
 
     const allPassed = results.every((r) => r.passed);

@@ -43,7 +43,14 @@ export interface Product {
   updatedAt: string;
 }
 
-export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus =
+  | 'draft'
+  | 'sent'
+  | 'pending'
+  | 'partially_paid'
+  | 'paid'
+  | 'overdue'
+  | 'cancelled';
 
 export interface Invoice {
   id: string;
