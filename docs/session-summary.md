@@ -259,48 +259,70 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
+---
+
 ## 11. Pengerjaan Step 10 — Implement Invoice Creation
 
-* **Tujuan:** Membangun antarmuka dan alur penerbitan faktur (*invoice creation form*) lengkap dengan pemilihan pelanggan, baris item dinamis (*dynamic line items*), pemilihan dari katalog produk dengan pengisian otomatis (*auto-fill*), kalkulasi finansial langsung (*reactive live totals*), penomoran faktur berurutan otomatis, integrasi pembuatan pelanggan instan (*quick customer creation modal*), penyimpanan status draf atau terbit, serta persistensi transaksional ke IndexedDB.
-* **Implementasi:**
-  - **Custom Hook Pengelola Formulir Faktur (`useInvoiceForm`):**
-    - Dibuat di [`features/invoices/_hooks/use-invoice-form.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_hooks/use-invoice-form.ts).
-    - Terintegrasi dengan `useForm` dan `useFieldArray` dari React Hook Form untuk memanipulasi baris item faktur secara dinamis.
-    - Mengambil data awal secara paralel dari IndexedDB:
-      - Daftar pelanggan aktif via `customerRepository`.
-      - Daftar produk katalog aktif via `productRepository`.
-      - Pengaturan default bisnis (`invoice_defaults`: `prefix`, `dueDays`, `notes`, `paymentInstructions`, default `taxRate`) via `settingsRepository`.
-      - Penomoran faktur berikutnya via `InvoiceDomainService.getNextInvoiceNumber()`.
-    - Menghitung tanggal terbit hari ini dan default jatuh tempo (+14 hari atau berdasarkan pengaturan usaha) menggunakan pustaka `date-fns` (`format`, `addDays`, `parseISO`) sesuai mandat Bagian 4.7 PRD Blueprint.
-    - **Zero Duplication Live Totals:** Menggunakan `useWatch` untuk memantau perubahan item dan diskon secara real-time, lalu menghitung seluruh total finansial secara eksklusif melalui `calculateInvoiceTotals()` dari domain engine.
-    - **Auto-Fill Produk Katalog:** Fungsi `handleSelectProduct()` mengisi nama, harga satuan, dan tarif PPN secara otomatis saat memilih barang/jasa dari katalog.
-    - **Preset Jatuh Tempo Cepat:** Menyediakan tombol jalan pintas (+7, +14, +30, +45 hari) yang menghitung `dueDate` secara instan.
-    - **Penyimpanan Status Draf & Terbit:** Memvalidasi form menggunakan Zod `invoiceSchema` dan menyimpan transaksi atomik faktur + item melalui `InvoiceDomainService.createInvoice()`.
-  - **Antarmuka Pembuatan Faktur Modern (`InvoiceCreateView`):**
-    - Dibuat di [`features/invoices/_components/invoice-create-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx).
-    - **Bilah Aksi & Navigasi:** Tombol kembali ke daftar faktur, badge status "Lokal IndexedDB", tombol sekunder "Simpan Draf", dan tombol primer "Terbitkan Faktur".
-    - **Pemilihan & Preview Pelanggan:** Menggunakan komponen global `AppSelect` dengan pencarian live, tombol "+ Pelanggan Baru" untuk mendaftarkan kontak baru langsung dari form faktur via modal tanpa kehilangan input, serta kartu preview detail kontak pelanggan terpilih (perusahaan, email, telepon, alamat).
-    - **Identifikasi Faktur & Tanggal:** Bidang nomor faktur dengan tombol segarkan (*refresh*), input tanggal terbit, input jatuh tempo, dan preset hari cepat.
-    - **Tabel Baris Item Dinamis:**
-      - Pemilih katalog produk berbasis `AppSelect`.
-      - Input deskripsi item kustom.
-      - Input kuantitas (`step="any"`, `min="0.0001"`).
-      - Input harga satuan Rupiah.
-      - Input diskon per baris item.
-      - Input tarif PPN (%).
-      - Tampilan langsung subtotal dan total baris item per baris.
-      - Tombol tambah baris item dan tombol hapus baris item.
-    - **Catatan & Instruksi Pembayaran:** Textarea multi-baris monospace untuk mencantumkan rincian rekening bank dan syarat pembayaran.
-    - **Ringkasan Finansial Terpusat (Live Totals Card):** Subtotal item, total diskon item, input diskon faktur global, DPP (Dasar Pengenaan Pajak), total PPN, dan Grand Total akhir dengan tipografi besar dan kontras tinggi.
-  - **Tampilan Daftar Faktur (`InvoiceListView`):**
-    - Dibuat di [`features/invoices/_components/invoice-list-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx).
-    - 4 kartu metrik ringkasan (Total Faktur, Total Nilai Tagihan, Menunggu Pembayaran, dan Sudah Lunas).
-    - Tabel faktur tersimpan di IndexedDB dengan nomor faktur, nama pelanggan, tanggal, format nominal Rupiah, dan badge status visual (`INVOICE_STATUS_CONFIG`).
-    - Empty state interaktif dengan tombol "Buat Faktur Pertama".
-  - **Integrasi Routing Halaman:**
-    - [`app/(customer)/invoices/new/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/new/page.tsx): Route utama pembuatan faktur baru (`/invoices/new`).
-    - [`app/(customer)/invoices/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/page.tsx): Route daftar faktur yang terhubung langsung dengan tombol aksi "Buat Faktur Baru".
-    - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Penambahan ikon `arrowLeft` untuk navigasi kembali.
+* **Tujuan & Ruang Lingkup:**
+  Membangun antarmuka dan alur penerbitan faktur (*invoice creation form*) secara menyeluruh sesuai mandat Blueprint PRD Bagian 10. Fitur mencakup pemilihan pelanggan, manipulasi baris item dinamis (*dynamic line items*), pemilihan produk katalog dengan pengisian otomatis (*auto-fill*), kalkulasi finansial reaktif tanpa duplikasi rumus (*zero duplication live totals*), penomoran faktur berurutan otomatis tanpa tabrakan (*collision-free sequential numbering*), pembuatan pelanggan baru instan di dalam form (*quick customer creation modal*), penyimpanan status draf atau terbit, serta persistensi transaksional ke IndexedDB.
+
+* **Detail Arsitektur & Implementasi Teknis:**
+  1. **Custom Hook Pengendali Formulir Faktur ([`useInvoiceForm`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_hooks/use-invoice-form.ts)):**
+     - Mengintegrasikan `useForm`, `useFieldArray`, dan `useWatch` dari **React Hook Form**.
+     - **Inisialisasi Data Master Paralel:**
+       - Mengambil seluruh kontak pelanggan aktif via `customerRepository.getAll()`.
+       - Mengambil katalog barang/jasa aktif via `productRepository.getAll()`.
+       - Mengambil konfigurasi default usaha (`invoice_defaults`: `prefix`, `dueDays`, `notes`, `paymentInstructions`, default `taxRate`) via `settingsRepository`.
+       - Mengambil nomor urut faktur berikutnya via [`InvoiceDomainService.getNextInvoiceNumber()`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/invoice-domain-service.ts#L44).
+     - **Manipulasi & Format Tanggal ([`date-fns`](file:///d:/DOT%20Indonesia/Project/ficco/package.json#L13)):**
+       - Menghitung tanggal terbit hari ini (`yyyy-MM-dd`) dan default tanggal jatuh tempo (+14 hari atau berdasarkan preferensi usaha) menggunakan `format`, `addDays`, dan `parseISO` dari `date-fns` sesuai Bagian 4.7 PRD Blueprint.
+     - **Kalkulasi Finansial Real-Time (*Zero Duplication Rule*):**
+       - Memantau perubahan kuantitas, harga, diskon, dan pajak tiap baris serta diskon faktur global secara reaktif via `useWatch`.
+       - Seluruh perhitungan diproses murni melalui fungsi domain terpusat [`calculateInvoiceTotals()`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-calculations.ts#L69). Komponen UI tidak melakukan kalkulasi matematika sendiri.
+     - **Auto-Fill Produk Katalog:**
+       - Fungsi `handleSelectProduct(index, productId)` secara otomatis mengisi nama deskripsi item, harga satuan, dan tarif PPN dari katalog barang/jasa, dengan kuantitas default 1.
+     - **Preset Jatuh Tempo Cepat:**
+       - Menyediakan tombol jalan pintas (+7, +14, +30, +45 hari) yang menghitung dan memperbarui nilai `dueDate` secara instan.
+     - **Penyimpanan Status Draf & Terbit:**
+       - Tombol *"Simpan Draf"* menetapkan status `draft`.
+       - Tombol *"Terbitkan Faktur"* menetapkan status `sent`.
+       - Validasi form dilakukan menggunakan Zod [`invoiceSchema`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_schemas/invoice.schemas.ts#L30) (termasuk validasi tanggal `dueDate >= issueDate`).
+       - Data disimpan atomik melalui transaksi multi-tabel Dexie [`InvoiceDomainService.createInvoice()`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/invoice-domain-service.ts#L142).
+
+  2. **Antarmuka Pembuatan Faktur Modern ([`InvoiceCreateView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx)):**
+     - **Bilah Aksi & Navigasi:** Tombol kembali ke daftar faktur ([`Icons.arrowLeft`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx#L208)), badge penanda status *"Lokal IndexedDB"*, tombol sekunder *"Simpan Draf"*, dan tombol primer *"Terbitkan Faktur"*.
+     - **Pemilihan & Preview Pelanggan:**
+       - Menggunakan komponen global [`AppSelect`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/select.tsx) dengan pencarian live (*searchable*) dan adaptasi tema gelap/terang.
+       - Tombol *"+ Pelanggan Baru"* memicu modal pembuatan pelanggan instan ([`CustomerFormModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/customers/_components/customer-form-modal.tsx)) sehingga pengguna dapat mendaftarkan klien baru di tengah pengisian faktur tanpa kehilangan draf yang telah diisi.
+       - Kartu preview detail kontak pelanggan menampilkan nama perusahaan, email, nomor telepon, dan alamat penagihan secara terformat.
+     - **Identifikasi Faktur & Tanggal:**
+       - Bidang nomor faktur otomatis dengan tombol segarkan (*refresh*) untuk memeriksa nomor urut terbaru dari IndexedDB.
+       - Input tanggal terbit (`issueDate`) dan tanggal jatuh tempo (`dueDate`).
+       - Deretan tombol preset jatuh tempo cepat (+7, +14, +30, +45 Hari).
+     - **Tabel Baris Item Dinamis:**
+       - Dropdown pemilihan katalog produk terintegrasi.
+       - Bidang deskripsi item kustom.
+       - Bidang kuantitas (`step="any"`, `min="0.0001"`).
+       - Bidang harga satuan Rupiah.
+       - Bidang diskon per baris item (Rp).
+       - Bidang tarif PPN (%).
+       - Tampilan live subtotal dan total baris item terhitung langsung via [`calculateLineItem()`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-calculations.ts#L29).
+       - Tombol tambah baris item (*"+ Tambah Baris Item"*) dan tombol hapus item per baris (dilindungi agar minimal menyisakan 1 baris item).
+     - **Catatan & Instruksi Pembayaran:**
+       - Textarea multi-baris monospace untuk mencantumkan rincian rekening transfer bank dan syarat penagihan (dimuat otomatis dari template pengaturan bisnis).
+     - **Kartu Ringkasan Finansial Terpusat (Live Totals Card):**
+       - Menampilkan rincian Subtotal Kotor, Total Diskon Item, input Diskon Faktur Global, DPP (Dasar Pengenaan Pajak), Total PPN, dan Grand Total akhir dengan tipografi besar dan kontras warna yang jelas.
+
+  3. **Tampilan Daftar Faktur & Pengujian Persistensi ([`InvoiceListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx)):**
+     - Menyediakan 4 kartu metrik ringkasan (Total Faktur, Total Nilai Tagihan, Menunggu Pembayaran, Sudah Lunas).
+     - Menampilkan tabel faktur tersimpan di IndexedDB dengan nomor faktur, nama pelanggan, tanggal terbit & jatuh tempo, total tagihan (Rp), dan badge status visual berbasis [`INVOICE_STATUS_CONFIG`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_types/invoice.types.ts#L70).
+     - *Empty state* interaktif dengan tombol *"Buat Faktur Pertama"* yang mengarahkan pengguna ke form pembuatan.
+
+  4. **Routing & Integrasi Halaman:**
+     - [`app/(customer)/invoices/new/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/new/page.tsx): Route utama halaman pembuatan faktur baru (`/invoices/new`).
+     - [`app/(customer)/invoices/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/page.tsx): Menghubungkan tampilan `InvoiceListView` dengan tombol *"Buat Faktur Baru"* yang mengarah ke `/invoices/new`.
+     - [`features/invoices/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/index.ts): Barrel export untuk `useInvoiceForm`, `InvoiceCreateView`, dan `InvoiceListView`.
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Penambahan ikon `arrowLeft` untuk navigasi kembali.
 
 ---
 
