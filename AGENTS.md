@@ -36,3 +36,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
    - Feature-specific code: `features/<feature>/` (e.g., `invoices`, `expenses`, `customers`, `products`, `reports`, `settings`, `backup`, `license`).
    - Cross-feature / shared utilities: `shared/components/`, `shared/hooks/`, `shared/utils/`, `shared/types/`.
    - Core DB and storage infrastructure: `infrastructure/database/`, `infrastructure/storage/`, `infrastructure/pwa/`.
+
+## STRICT GIT COMMAND BAN (DILARANG MENJALANKAN GIT COMMAND APAPUN)
+- **MUTLAK & TANPA PENGECUALIAN**: JANGAN PERNAH menjalankan perintah git apapun (`git add`, `git commit`, `git push`, `git status`, `git checkout`, `git reset`, `git stash`, `git restore`, `git diff`, dll.).
+- Pengelolaan version control (staging, commit, branch, push, dll.) sepenuhnya dilakukan secara mandiri dan manual oleh USER.
+- Agen dilarang mengeksekusi perintah terminal yang mengandung kata kunci `git`.
+
