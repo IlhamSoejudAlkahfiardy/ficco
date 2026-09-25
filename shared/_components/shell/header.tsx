@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { Icons } from '../icons';
 import { MAIN_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../../_constants/navigation';
 import { useShellStore } from '../../_hooks/use-shell-store';
+import { useTheme } from '../../_hooks/use-theme';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const { toggleMobileNav, isOnline, isCheckingConnectivity, checkConnectivity } =
     useShellStore();
+  const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
@@ -78,6 +80,20 @@ export const Header: React.FC = () => {
               ? 'Online'
               : 'Offline Mode'}
           </span>
+        </button>
+        {/* Theme Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="p-2 rounded-xl text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+          title={isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)'}
+          aria-label="Toggle theme mode"
+        >
+          {isDark ? (
+            <Icons.sun size={18} className="text-amber-400" />
+          ) : (
+            <Icons.moon size={18} className="text-slate-600 dark:text-zinc-300" />
+          )}
         </button>
       </div>
     </header>

@@ -149,7 +149,29 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 8. Status Saat Ini & Langkah Berikutnya
+## 8. Refaktor Global Select Ant Design & Sinkronisasi Tema (Dark / Light Mode)
+
+* **Tujuan:** Menggantikan seluruh elemen native `<select>` dengan komponen kustom terpusat berbasis Ant Design yang dapat dicari (*searchable*), berukuran default medium, meneruskan seluruh props ke child component, serta otomatis beradaptasi dengan mode gelap (*dark mode*) dan terang (*light mode*).
+* **Implementasi:**
+  - **Komponen Shared Global (`AppSelect`):**
+    - Dibuat di [`shared/_components/select.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/select.tsx) dan diekspor via [`shared/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/shared/index.ts).
+    - Membungkus komponen `Select` Ant Design dengan:
+      - **Searchable Select:** `showSearch: true` aktif secara bawaan dengan fungsi filter case-insensitive berbasis `label`.
+      - **Default Size Medium:** Ukuran bawaan diatur ke `'middle'` (medium Ant Design) dan dapat diubah dinamis via prop `size` (`'small' | 'middle' | 'large' | 'medium'`).
+      - **Pass-through Props:** Meneruskan seluruh properti asli Ant Design (`options`, `value`, `onChange`, `placeholder`, `allowClear`, `disabled`, `status`, dll.).
+  - **Penggantian Komponen di Seluruh Proyek:**
+    - [`features/customers/_components/customer-list-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/customers/_components/customer-list-view.tsx): Opsi pengurutan data pelanggan (*SortBy*).
+    - [`features/settings/_components/company-profile-form.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/settings/_components/company-profile-form.tsx): Pemilihan mata uang utama usaha yang diintegrasikan dengan `Controller` dari React Hook Form.
+  - **Penyelarasan Tema (Dark / Light Mode Synchronization):**
+    - **Akar Masalah:** Sebelumnya `ConfigProvider` pada `AppShell` menggunakan `antdTheme.defaultAlgorithm` secara statis, menyebabkan elemen select dan dropdown popover selalu berwarna putih meski antarmuka dalam mode gelap.
+    - **Custom Hook `useTheme`:** Dibuat di [`shared/_hooks/use-theme.ts`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_hooks/use-theme.ts) untuk mendeteksi preferensi sistem (`prefers-color-scheme: dark`), class `.dark` pada `<html>`, dan menyimpan preferensi ke `localStorage` (`ficco_theme`).
+    - **Theme-Aware AppSelect & AppShell:** `AppSelect` dan [`shared/_components/shell/app-shell.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/shell/app-shell.tsx) kini menerapkan `antdTheme.darkAlgorithm` atau `antdTheme.defaultAlgorithm` secara dinamis, dengan token warna Tailwind Zinc (`#18181b` untuk latar belakang container dan popup, `#27272a` untuk border, `#f4f4f5` untuk teks).
+    - **Toggle Button Tema di Header:** Ditambahkan tombol toggle tema (ikon Matahari ☀️ / Bulan 🌙) di navbar [`shared/_components/shell/header.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/shell/header.tsx).
+    - **CSS Styling:** Menambahkan `@custom-variant dark (&:where(.dark, .dark *));` dan CSS variable `:root.dark` di [`app/globals.css`](file:///d:/DOT%20Indonesia/Project/ficco/app/globals.css).
+
+---
+
+## 9. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -159,4 +181,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 5** | Implement IndexedDB/Dexie foundation (9 Tables, Repositories, Playground) | Selesai | `d0d86f2` |
 | **Step 6** | Implement company/business settings (Profile, Logo, Invoice Defaults) | Selesai | `3e23be8` |
 | **Step 7** | Implement customer management (CRUD Pelanggan, Search, Detail Drawer, Zod Form) | Selesai | Terverifikasi lokal |
+| **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | Terverifikasi lokal |
 | **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Pajak) | **Langkah Selanjutnya** | Menunggu instruksi |
+

@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { CompanyProfile, DEFAULT_CURRENCIES } from '../_types/settings.types';
 import { CompanyProfileFormData } from '../_schemas/settings.schemas';
 import { LogoUploader } from './logo-uploader';
+import { AppSelect } from '@/shared';
 
 interface CompanyProfileFormProps {
   initialData: CompanyProfile | null;
@@ -123,16 +124,27 @@ export const CompanyProfileForm: React.FC<CompanyProfileFormProps> = ({
           <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
             Mata Uang Utama <span className="text-rose-500">*</span>
           </label>
-          <select
-            {...register('currency', { required: 'Mata uang wajib dipilih' })}
-            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {DEFAULT_CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="currency"
+            control={control}
+            rules={{ required: 'Mata uang wajib dipilih' }}
+            render={({ field }) => (
+              <AppSelect
+                value={field.value}
+                onChange={field.onChange}
+                options={DEFAULT_CURRENCIES.map((c) => ({
+                  label: c.label,
+                  value: c.code,
+                }))}
+                placeholder="Pilih mata uang"
+                className="w-full"
+                status={errors.currency ? 'error' : undefined}
+              />
+            )}
+          />
+          {errors.currency && (
+            <p className="text-xs text-rose-500 mt-1">{errors.currency.message}</p>
+          )}
         </div>
 
         {/* Email */}

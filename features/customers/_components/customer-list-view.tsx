@@ -7,6 +7,7 @@ import { CustomerDetailDrawer } from './customer-detail-drawer';
 import { CustomerDeleteDialog } from './customer-delete-dialog';
 import { CustomerSortBy } from '../_types/customer.types';
 import { Icons } from '@/shared/_components/icons';
+import { AppSelect } from '@/shared';
 
 export const CustomerListView: React.FC = () => {
   const {
@@ -178,16 +179,18 @@ export const CustomerListView: React.FC = () => {
 
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-slate-400 dark:text-zinc-500 hidden sm:inline">Urutkan:</span>
-          <select
+          <AppSelect<CustomerSortBy>
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as CustomerSortBy)}
-            className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="created_desc">Terbaru Ditambahkan</option>
-            <option value="created_asc">Terlama</option>
-            <option value="name_asc">Nama (A - Z)</option>
-            <option value="name_desc">Nama (Z - A)</option>
-          </select>
+            onChange={(val) => setSortBy(val)}
+            options={[
+              { value: 'created_desc', label: 'Terbaru Ditambahkan' },
+              { value: 'created_asc', label: 'Terlama' },
+              { value: 'name_asc', label: 'Nama (A - Z)' },
+              { value: 'name_desc', label: 'Nama (Z - A)' },
+            ]}
+            className="w-48"
+            placeholder="Pilih Urutan"
+          />
         </div>
       </div>
 
