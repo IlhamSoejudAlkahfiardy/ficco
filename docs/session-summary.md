@@ -257,7 +257,54 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 11. Status Saat Ini & Langkah Berikutnya
+---
+
+## 11. Pengerjaan Step 10 — Implement Invoice Creation
+
+* **Tujuan:** Membangun antarmuka dan alur penerbitan faktur (*invoice creation form*) lengkap dengan pemilihan pelanggan, baris item dinamis (*dynamic line items*), pemilihan dari katalog produk dengan pengisian otomatis (*auto-fill*), kalkulasi finansial langsung (*reactive live totals*), penomoran faktur berurutan otomatis, integrasi pembuatan pelanggan instan (*quick customer creation modal*), penyimpanan status draf atau terbit, serta persistensi transaksional ke IndexedDB.
+* **Implementasi:**
+  - **Custom Hook Pengelola Formulir Faktur (`useInvoiceForm`):**
+    - Dibuat di [`features/invoices/_hooks/use-invoice-form.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_hooks/use-invoice-form.ts).
+    - Terintegrasi dengan `useForm` dan `useFieldArray` dari React Hook Form untuk memanipulasi baris item faktur secara dinamis.
+    - Mengambil data awal secara paralel dari IndexedDB:
+      - Daftar pelanggan aktif via `customerRepository`.
+      - Daftar produk katalog aktif via `productRepository`.
+      - Pengaturan default bisnis (`invoice_defaults`: `prefix`, `dueDays`, `notes`, `paymentInstructions`, default `taxRate`) via `settingsRepository`.
+      - Penomoran faktur berikutnya via `InvoiceDomainService.getNextInvoiceNumber()`.
+    - Menghitung tanggal terbit hari ini dan default jatuh tempo (+14 hari atau berdasarkan pengaturan usaha) menggunakan pustaka `date-fns` (`format`, `addDays`, `parseISO`) sesuai mandat Bagian 4.7 PRD Blueprint.
+    - **Zero Duplication Live Totals:** Menggunakan `useWatch` untuk memantau perubahan item dan diskon secara real-time, lalu menghitung seluruh total finansial secara eksklusif melalui `calculateInvoiceTotals()` dari domain engine.
+    - **Auto-Fill Produk Katalog:** Fungsi `handleSelectProduct()` mengisi nama, harga satuan, dan tarif PPN secara otomatis saat memilih barang/jasa dari katalog.
+    - **Preset Jatuh Tempo Cepat:** Menyediakan tombol jalan pintas (+7, +14, +30, +45 hari) yang menghitung `dueDate` secara instan.
+    - **Penyimpanan Status Draf & Terbit:** Memvalidasi form menggunakan Zod `invoiceSchema` dan menyimpan transaksi atomik faktur + item melalui `InvoiceDomainService.createInvoice()`.
+  - **Antarmuka Pembuatan Faktur Modern (`InvoiceCreateView`):**
+    - Dibuat di [`features/invoices/_components/invoice-create-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx).
+    - **Bilah Aksi & Navigasi:** Tombol kembali ke daftar faktur, badge status "Lokal IndexedDB", tombol sekunder "Simpan Draf", dan tombol primer "Terbitkan Faktur".
+    - **Pemilihan & Preview Pelanggan:** Menggunakan komponen global `AppSelect` dengan pencarian live, tombol "+ Pelanggan Baru" untuk mendaftarkan kontak baru langsung dari form faktur via modal tanpa kehilangan input, serta kartu preview detail kontak pelanggan terpilih (perusahaan, email, telepon, alamat).
+    - **Identifikasi Faktur & Tanggal:** Bidang nomor faktur dengan tombol segarkan (*refresh*), input tanggal terbit, input jatuh tempo, dan preset hari cepat.
+    - **Tabel Baris Item Dinamis:**
+      - Pemilih katalog produk berbasis `AppSelect`.
+      - Input deskripsi item kustom.
+      - Input kuantitas (`step="any"`, `min="0.0001"`).
+      - Input harga satuan Rupiah.
+      - Input diskon per baris item.
+      - Input tarif PPN (%).
+      - Tampilan langsung subtotal dan total baris item per baris.
+      - Tombol tambah baris item dan tombol hapus baris item.
+    - **Catatan & Instruksi Pembayaran:** Textarea multi-baris monospace untuk mencantumkan rincian rekening bank dan syarat pembayaran.
+    - **Ringkasan Finansial Terpusat (Live Totals Card):** Subtotal item, total diskon item, input diskon faktur global, DPP (Dasar Pengenaan Pajak), total PPN, dan Grand Total akhir dengan tipografi besar dan kontras tinggi.
+  - **Tampilan Daftar Faktur (`InvoiceListView`):**
+    - Dibuat di [`features/invoices/_components/invoice-list-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx).
+    - 4 kartu metrik ringkasan (Total Faktur, Total Nilai Tagihan, Menunggu Pembayaran, dan Sudah Lunas).
+    - Tabel faktur tersimpan di IndexedDB dengan nomor faktur, nama pelanggan, tanggal, format nominal Rupiah, dan badge status visual (`INVOICE_STATUS_CONFIG`).
+    - Empty state interaktif dengan tombol "Buat Faktur Pertama".
+  - **Integrasi Routing Halaman:**
+    - [`app/(customer)/invoices/new/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/new/page.tsx): Route utama pembuatan faktur baru (`/invoices/new`).
+    - [`app/(customer)/invoices/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/page.tsx): Route daftar faktur yang terhubung langsung dengan tombol aksi "Buat Faktur Baru".
+    - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Penambahan ikon `arrowLeft` untuk navigasi kembali.
+
+---
+
+## 12. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -269,7 +316,8 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 7** | Implement customer management (CRUD Pelanggan, Search, Detail Drawer, Zod Form) | Selesai | Terverifikasi lokal |
 | **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | `00dfef8` |
 | **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Satuan, Pajak) | Selesai | Terverifikasi lokal |
-| **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | **Selesai** | Terverifikasi lokal |
-| **Step 10** | Implement invoice creation/edit form (Dynamic line items, customer select, live totals, draft save) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | Selesai | `5e82695` |
+| **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | **Selesai** | `a8a8bd4` |
+| **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
