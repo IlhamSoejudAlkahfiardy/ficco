@@ -59,6 +59,24 @@ export class InvoiceRepository extends BaseRepository<Invoice, string> {
   }
 
   /**
+   * Transactionally upserts an invoice and replaces its line items
+   */
+  async saveWithItems(invoice: Invoice, items: InvoiceItem[]): Promise<string> {
+    try {
+      return await db.transaction('rw', [db.invoices, db.invoiceItems], async () => {
+        await db.invoices.put(invoice);
+        await db.invoiceItems.where('invoiceId').equals(invoice.id).delete();
+        if (items.length > 0) {
+          await db.invoiceItems.bulkAdd(items);
+        }
+        return invoice.id;
+      });
+    } catch (err) {
+      handleDbError(err, 'InvoiceRepository.saveWithItems');
+    }
+  }
+
+  /**
    * Transactionally deletes an invoice and its associated line items
    */
   async deleteWithItems(id: string): Promise<void> {

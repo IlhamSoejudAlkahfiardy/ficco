@@ -8,13 +8,32 @@ export class SettingsRepository extends BaseRepository<AppSetting, string> {
     super(db.settings, 'Setting');
   }
 
-  async getSetting<T>(key: string, defaultValue: T): Promise<T> {
+  /**
+   * Retrieves setting value by key, returning undefined if not found.
+   */
+  async get<T>(key: string): Promise<T | undefined> {
     try {
       const setting = await this.getById(key);
       if (!setting || setting.value === undefined) {
-        return defaultValue;
+        return undefined;
       }
       return setting.value as T;
+    } catch (err) {
+      handleDbError(err, `SettingsRepository.get(${key})`);
+    }
+  }
+
+  /**
+   * Alias for setSetting to store key-value pair.
+   */
+  async set<T>(key: string, value: T): Promise<void> {
+    return this.setSetting(key, value);
+  }
+
+  async getSetting<T>(key: string, defaultValue: T): Promise<T> {
+    try {
+      const value = await this.get<T>(key);
+      return value !== undefined ? value : defaultValue;
     } catch (err) {
       handleDbError(err, `SettingsRepository.getSetting(${key})`);
     }

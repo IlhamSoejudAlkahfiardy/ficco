@@ -42,3 +42,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Pengelolaan version control (staging, commit, branch, push, dll.) sepenuhnya dilakukan secara mandiri dan manual oleh USER.
 - Agen dilarang mengeksekusi perintah terminal yang mengandung kata kunci `git`.
 
+## Session Summary & Documentation Directive (Pencatatan Resume Fitur)
+- **WAJIB SETELAH PENGERJAAN FITUR**:
+  - Setiap kali selesai mengerjakan **fitur baru / kelanjutan implementasi fitur** (bukan perbaikan issue / bugfix / penanganan error kecil), agen **WAJIB** memperbarui dan mencatat resume pengerjaan ke:
+    **`docs/session-summary.md`**
+  - **Batasan & Kriteria Pemicu**:
+    - **Wajib Ditulis (Fitur)**: Pembuatan atau penambahan fitur baru, implementasi step dari blueprint, pembuatan modul domain baru, flow bisnis baru, integrasi halaman/komponen fitur baru.
+    - **Tidak Perlu Ditulis (Non-Fitur)**: Perbaikan bug/error, type error / linting fix, hotfix kecil, penyesuaian styling minor, atau investigasi issue.
+  - **Format Resume yang Ditulis**:
+    - Judul section pengerjaan fitur (melanjutkan penomoran yang sudah ada di dokumen).
+    - **Tujuan Fitur**: Apa yang dibangun dan tujuannya.
+    - **Detail Implementasi**: File-file yang dibuat/diubah dengan clickable link (`[`filename`](file:///path/to/file)`), struktur layer (`_components`, `_hooks`, `_services`, `_schemas`, `_types`, dll.).
+    - **Status & Hasil**: Fungsionalitas yang berhasil diimplementasikan.
+
+

@@ -326,7 +326,51 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 12. Status Saat Ini & Langkah Berikutnya
+## 12. Pengerjaan Step 11 — Implement Invoice List/Detail
+
+* **Tujuan & Ruang Lingkup:**
+  Membangun manajemen daftar faktur dan tampilan rincian dokumen (*invoice list & detail view*) secara menyeluruh sesuai mandat Blueprint PRD Bagian 11. Fitur mencakup pencarian multi-kolom (*search*), filter status siklus hidup (*status filter*), pengurutan multi-kriteria (*sorting*), paginasi (*pagination*), panel laci rincian faktur instan (*sliding detail drawer*), halaman detail mandiri siap cetak/PDF, alur edit faktur (*edit flow*), pembatalan faktur (*cancellation*), serta penghapusan aman dengan kaskade data (*cascading delete*) di IndexedDB.
+
+* **Detail Arsitektur & Implementasi Teknis:**
+  1. **Peningkatan Manajemen Database & Repositori ([`invoiceRepository`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/repositories/invoice-repository.ts)):**
+     - Menambahkan fungsi [`saveWithItems(invoice, items)`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/repositories/invoice-repository.ts#L64-L78) yang melakukan transaksi atomik Dexie (`put` invoice, pembersihan item lama, dan `bulkAdd` item baru) untuk mendukung pembaruan/edit faktur tanpa meninggalkan *orphan records*.
+     - Menyempurnakan [`InvoiceDomainService`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/invoice-domain-service.ts) dengan metode:
+       - `updateInvoice(id, formData)`: Validasi Zod, rekalkulasi finansial terpusat, dan pembaruan atomik di IndexedDB.
+       - `cancelInvoice(id)`: Mengubah status menjadi `'cancelled'`.
+       - `updateStatus(id, newStatus)`: Mengubah status siklus hidup (misal: draf -> terbit).
+       - `deleteInvoice(id)`: Penghapusan kaskade faktur, seluruh baris item, dan riwayat pembayaran via `deleteWithItems`.
+
+  2. **Dukungan Mode Edit pada Form Faktur ([`useInvoiceForm`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_hooks/use-invoice-form.ts)):**
+     - Opsi `invoiceId` memungkinkan inisialisasi form dalam **Mode Edit** dengan mengambil data faktur dan seluruh baris itemnya via `InvoiceDomainService.getFullDetails(id)`.
+     - Menyimpan perubahan dengan memanggil `updateInvoice` secara otomatis ketika dalam mode edit, atau `createInvoice` ketika dalam mode pembuatan baru.
+     - Komponen form ([`InvoiceCreateView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx)) dan aliasnya ([`InvoiceEditView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx#L625)) secara dinamis menyesuaikan judul, lencana (*badge*), dan label tombol aksi ("Perbarui & Simpan").
+
+  3. **Tampilan Daftar Faktur Terpadu ([`InvoiceListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx)):**
+     - **Metrik Statistik Real-Time:** 4 kartu metrik (Total Faktur, Total Tagihan, Menunggu Pembayaran/Draf, Sudah Lunas) yang dihitung dari seluruh rekaman di IndexedDB.
+     - **Pencarian Multi-Kolom (*Live Search*):** Mencari berdasarkan nomor faktur, nama klien/perusahaan, dan catatan penagihan dengan tombol reset instan.
+     - **Filter Status Siklus Hidup:** Dropdown berbasis `AppSelect` yang memfilter: *Semua Status, Draf, Terkirim, Menunggu Pembayaran, Dibayar Sebagian, Lunas, Jatuh Tempo, dan Dibatalkan*.
+     - **Pengurutan Fleksibel (*Multi-Sorting*):** Opsi urutkan berdasarkan *Terbaru Ditambahkan, Terlama Ditambahkan, Jatuh Tempo Terdekat, Nilai Tertinggi, dan Nilai Terendah*.
+     - **Tampilan Responsif Desktop & Mobile:**
+       - Tabel desktop elegan dengan efek hover, badge status visual berbasis `INVOICE_STATUS_CONFIG`, dan tombol aksi cepat per baris.
+       - Tampilan kartu seluler (*mobile card list*) yang nyaman disentuh pada layar smartphone.
+     - **Paginasi Cerdas (*Client Pagination*):** Membatasi 10 faktur per halaman dengan kontrol navigasi halaman (sebelumnya, nomor halaman, berikutnya).
+
+  4. **Panel Laci Detail Instan & Halaman Dokumen Mandiri:**
+     - **Sliding Detail Drawer ([`InvoiceDetailDrawer`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-drawer.tsx)):**
+       - Membuka laci geser dari sisi kanan layar saat mengklik baris faktur, memungkinkan pengguna memeriksa rincian lengkap tanpa berpindah halaman atau kehilangan filter pencarian.
+     - **Dokumen Faktur Siap Cetak/PDF ([`InvoiceDetailView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-view.tsx)):**
+       - Menampilkan identitas penerbit (profil usaha dari `company_profile`), identitas klien/pelanggan, tanggal terbit & jatuh tempo dengan peringatan jatuh tempo (*overdue alert*).
+       - Tabel itemized lengkap dengan kuantitas, harga satuan, diskon, dan tarif pajak per baris.
+       - Ringkasan finansial terpusat: Subtotal, Diskon, DPP, PPN, dan Grand Total.
+       - Ringkasan pelunasan: Total Terbayar dan Sisa Tagihan (*remaining balance*).
+       - Catatan dan instruksi transfer bank.
+       - Tombol aksi dokumen: *Cetak Faktur* (`window.print()` dengan CSS `@media print`), *Edit*, *Tandai Terbit*, *Batalkan*, dan *Hapus Faktur* dengan modal konfirmasi aman.
+     - **Halaman Detail Mandiri ([`app/(customer)/invoices/[id]/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/[id]/page.tsx)):** Route URL permanen `/invoices/[id]`.
+     - **Halaman Edit Mandiri ([`app/(customer)/invoices/[id]/edit/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/invoices/[id]/edit/page.tsx)):** Route URL permanen `/invoices/[id]/edit`.
+
+---
+
+## 13. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -339,7 +383,8 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Refactor** | Global AntD Select (`AppSelect`) & Dark/Light Mode Theme Synchronization | Selesai | `00dfef8` |
 | **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Satuan, Pajak) | Selesai | Terverifikasi lokal |
 | **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | Selesai | `5e82695` |
-| **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | **Selesai** | `a8a8bd4` |
-| **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | Selesai | `a8a8bd4` |
+| **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | **Selesai** | Terverifikasi lokal |
+| **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 

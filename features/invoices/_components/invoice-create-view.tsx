@@ -11,7 +11,11 @@ import { CustomerService } from '@/features/customers/_services/customer-service
 import { CustomerFormData } from '@/features/customers/_schemas/customer.schemas';
 import { calculateLineItem } from '../_utils/invoice-calculations';
 
-export const InvoiceCreateView: React.FC = () => {
+export interface InvoiceFormViewProps {
+  invoiceId?: string;
+}
+
+export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId }) => {
   const {
     register,
     control,
@@ -26,6 +30,7 @@ export const InvoiceCreateView: React.FC = () => {
     setDueDatePreset,
     refreshInvoiceNumber,
     saveInvoice,
+    isEditMode,
     isLoadingInit,
     isSubmitting,
     submitError,
@@ -43,7 +48,7 @@ export const InvoiceCreateView: React.FC = () => {
     setIsNewCustomerModalOpen,
     isCreatingCustomer,
     setIsCreatingCustomer,
-  } = useInvoiceForm();
+  } = useInvoiceForm({ invoiceId });
 
   // Handle Quick Customer creation
   const handleQuickCreateCustomer = async (data: CustomerFormData) => {
@@ -99,14 +104,16 @@ export const InvoiceCreateView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Buat Faktur Baru
+                {isEditMode ? `Edit Faktur ${watch('invoiceNumber') || ''}` : 'Buat Faktur Baru'}
               </h1>
               <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
-                Lokal IndexedDB
+                {isEditMode ? 'Mode Edit' : 'Lokal IndexedDB'}
               </span>
             </div>
             <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
-              Terbitkan faktur profesional dan simpan secara privat di perangkat Anda.
+              {isEditMode
+                ? 'Perbarui rincian item, diskon, atau informasi faktur Anda.'
+                : 'Terbitkan faktur profesional dan simpan secara privat di perangkat Anda.'}
             </p>
           </div>
         </div>
@@ -119,7 +126,11 @@ export const InvoiceCreateView: React.FC = () => {
             onClick={() => saveInvoice('draft')}
             className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all shadow-xs disabled:opacity-50"
           >
-            {isSubmitting && watchedStatus === 'draft' ? 'Menyimpan...' : 'Simpan Draf'}
+            {isSubmitting && watchedStatus === 'draft'
+              ? 'Menyimpan...'
+              : isEditMode
+              ? 'Simpan sebagai Draf'
+              : 'Simpan Draf'}
           </button>
           <button
             type="button"
@@ -128,7 +139,13 @@ export const InvoiceCreateView: React.FC = () => {
             className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <Icons.check size={16} />
-            <span>{isSubmitting && watchedStatus === 'sent' ? 'Menerbitkan...' : 'Terbitkan Faktur'}</span>
+            <span>
+              {isSubmitting && watchedStatus === 'sent'
+                ? 'Menyimpan...'
+                : isEditMode
+                ? 'Perbarui & Simpan'
+                : 'Terbitkan Faktur'}
+            </span>
           </button>
         </div>
       </div>
@@ -604,3 +621,6 @@ export const InvoiceCreateView: React.FC = () => {
     </div>
   );
 };
+
+export const InvoiceEditView = InvoiceCreateView;
+

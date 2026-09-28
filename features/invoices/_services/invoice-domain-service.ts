@@ -204,4 +204,92 @@ export class InvoiceDomainService {
 
     return { invoice, items };
   }
+
+  /**
+   * Transactionally updates an existing invoice and its line items.
+   */
+  static async updateInvoice(
+    id: string,
+    formData: InvoiceFormData
+  ): Promise<{
+    invoice: Invoice;
+    items: InvoiceItem[];
+  }> {
+    const existing = await invoiceRepository.getById(id);
+    if (!existing) throw new Error('Faktur tidak ditemukan untuk diperbarui.');
+
+    const validated = invoiceSchema.parse(formData);
+    const now = new Date().toISOString();
+
+    const calc = calculateInvoiceTotals({
+      items: validated.items,
+      invoiceDiscount: validated.discount,
+      invoiceTaxRate: 0,
+    });
+
+    const invoice: Invoice = {
+      id,
+      invoiceNumber: validated.invoiceNumber.trim().toUpperCase(),
+      customerId: validated.customerId,
+      issueDate: validated.issueDate,
+      dueDate: validated.dueDate,
+      status: validated.status || existing.status,
+      notes: validated.notes?.trim() || undefined,
+      subtotal: calc.subtotal,
+      discount: calc.totalDiscount,
+      tax: calc.totalTax,
+      total: calc.grandTotal,
+      createdAt: existing.createdAt,
+      updatedAt: now,
+    };
+
+    const items: InvoiceItem[] = calc.lineItems.map((item, index) => ({
+      id: item.id || `item_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 6)}`,
+      invoiceId: id,
+      productId: item.productId || undefined,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      taxRate: item.taxRate,
+      subtotal: item.subtotal,
+      total: item.total,
+    }));
+
+    await invoiceRepository.saveWithItems(invoice, items);
+    return { invoice, items };
+  }
+
+  /**
+   * Cancels an invoice.
+   */
+  static async cancelInvoice(id: string): Promise<void> {
+    const invoice = await invoiceRepository.getById(id);
+    if (!invoice) throw new Error('Faktur tidak ditemukan.');
+
+    await invoiceRepository.update(id, {
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Manually changes an invoice status (e.g. from draft to sent).
+   */
+  static async updateStatus(id: string, status: InvoiceStatus): Promise<void> {
+    const invoice = await invoiceRepository.getById(id);
+    if (!invoice) throw new Error('Faktur tidak ditemukan.');
+
+    await invoiceRepository.update(id, {
+      status,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Deletes an invoice and all related line items and payments.
+   */
+  static async deleteInvoice(id: string): Promise<void> {
+    await invoiceRepository.deleteWithItems(id);
+  }
 }

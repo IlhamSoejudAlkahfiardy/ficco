@@ -17,6 +17,7 @@ import { InvoiceDomainService } from '../_services/invoice-domain-service';
 import { InvoiceCalculationResult } from '../_types/invoice.types';
 
 export interface UseInvoiceFormOptions {
+  invoiceId?: string;
   onSuccess?: (invoiceId: string) => void;
   defaultStatus?: 'draft' | 'sent' | 'pending';
 }
@@ -82,7 +83,7 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
   const loadInitialData = useCallback(async () => {
     setIsLoadingInit(true);
     try {
-      const [custList, prodList, defaults, nextNum] = await Promise.all([
+      const [custList, prodList, defaults] = await Promise.all([
         customerRepository.getAll(),
         productRepository.getAll(),
         settingsRepository.get<{
@@ -93,12 +94,42 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
           notes?: string;
           paymentInstructions?: string;
         }>('invoice_defaults'),
-        InvoiceDomainService.getNextInvoiceNumber(),
       ]);
 
       setCustomers(custList);
       setProducts(prodList.filter((p) => p.active));
 
+      if (options?.invoiceId) {
+        // Edit Mode: Load existing invoice and items
+        const existingData = await InvoiceDomainService.getFullDetails(options.invoiceId);
+        if (existingData) {
+          const { invoice, items } = existingData;
+          reset({
+            id: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            customerId: invoice.customerId,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            status: invoice.status,
+            notes: invoice.notes || '',
+            discount: invoice.discount || 0,
+            tax: invoice.tax || 0,
+            items: items.map((it) => ({
+              id: it.id,
+              productId: it.productId || '',
+              description: it.description,
+              quantity: it.quantity,
+              unitPrice: it.unitPrice,
+              discount: it.discount || 0,
+              taxRate: it.taxRate || 0,
+            })),
+          });
+          return;
+        }
+      }
+
+      // Create Mode: Calculate next sequential number and defaults
+      const nextNum = await InvoiceDomainService.getNextInvoiceNumber();
       const dueDays = defaults?.dueDays || 14;
       const calculatedDueDate = format(addDays(new Date(), dueDays), 'yyyy-MM-dd');
 
@@ -122,7 +153,7 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
     } finally {
       setIsLoadingInit(false);
     }
-  }, [setValue]);
+  }, [options?.invoiceId, reset, setValue]);
 
   useEffect(() => {
     loadInitialData();
@@ -245,10 +276,20 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
           return false;
         }
 
-        const result = await InvoiceDomainService.createInvoice(validated.data);
+        let resultInvoiceId: string;
+        if (options?.invoiceId) {
+          const result = await InvoiceDomainService.updateInvoice(
+            options.invoiceId,
+            validated.data
+          );
+          resultInvoiceId = result.invoice.id;
+        } else {
+          const result = await InvoiceDomainService.createInvoice(validated.data);
+          resultInvoiceId = result.invoice.id;
+        }
 
         if (options?.onSuccess) {
-          options.onSuccess(result.invoice.id);
+          options.onSuccess(resultInvoiceId);
         } else {
           router.push('/invoices');
         }
@@ -295,6 +336,7 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
     saveInvoice,
 
     // State
+    isEditMode: Boolean(options?.invoiceId),
     isLoadingInit,
     isSubmitting,
     submitError,

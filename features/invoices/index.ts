@@ -8,3 +8,5 @@ export * from './_services/invoice-domain-service';
 export * from './_hooks/use-invoice-form';
 export * from './_components/invoice-create-view';
 export * from './_components/invoice-list-view';
+export * from './_components/invoice-detail-view';
+export * from './_components/invoice-detail-drawer';
