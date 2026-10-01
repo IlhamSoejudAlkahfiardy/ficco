@@ -3,7 +3,7 @@ import { settingsRepository } from '@/infrastructure/database/repositories/setti
 import { paymentRepository } from '@/infrastructure/database/repositories/payment-repository';
 import { customerRepository } from '@/infrastructure/database/repositories/customer-repository';
 import { db } from '@/infrastructure/database/db';
-import { Invoice, InvoiceItem, InvoiceStatus, Payment } from '@/infrastructure/database/schema';
+import { Customer, Invoice, InvoiceItem, InvoiceStatus, Payment } from '@/infrastructure/database/schema';
 import {
   InvoiceCalculationInput,
   InvoiceCalculationResult,
@@ -23,15 +23,7 @@ import {
 export interface InvoiceFullDetails {
   invoice: Invoice;
   items: InvoiceItem[];
-  customer?: {
-    id: string;
-    name: string;
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    taxNumber?: string;
-  };
+  customer?: Customer;
   calculation: InvoiceCalculationResult;
   paymentSummary: InvoicePaymentSummary;
   payments: Payment[];

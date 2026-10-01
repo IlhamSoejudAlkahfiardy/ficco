@@ -10,7 +10,7 @@ import { Payment } from '@/features/invoices/_types/payment.types';
 export interface InvoicePdfData {
   invoice: Invoice;
   items: InvoiceItem[];
-  customer?: Customer;
+  customer?: Customer | Partial<Customer>;
   company?: Partial<CompanyProfile>;
   calculation: InvoiceCalculationResult;
   paymentSummary: InvoicePaymentSummary;
