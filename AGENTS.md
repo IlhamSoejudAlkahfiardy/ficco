@@ -55,4 +55,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
     - **Detail Implementasi**: File-file yang dibuat/diubah dengan clickable link (`[`filename`](file:///path/to/file)`), struktur layer (`_components`, `_hooks`, `_services`, `_schemas`, `_types`, dll.).
     - **Status & Hasil**: Fungsionalitas yang berhasil diimplementasikan.
 
+## Mandatory Commit Message Recommendation (Rekomendasi Pesan Commit)
+- **WAJIB SETELAH SETIAP PENGERJAAN**:
+  - Setiap kali selesai mengerjakan sesuatu (baik fitur baru, perbaikan bug/error, refactoring, perbaikan tipe/linting, penyesuaian styling, update dokumentasi, dsb.), agen **WAJIB** menyertakan rekomendasi perintah `git add` dan `git commit` di akhir respon.
+  - Perintah harus disajikan dalam code block yang siap langsung di-copy-paste oleh USER:
+    ```bash
+    git add .
+    git commit -m "<type>(<scope>): <deskripsi ringkas dan jelas>"
+    ```
+  - Format pesan commit harus mengikuti konvensi **Conventional Commits** (misal: `feat(...)`, `fix(...)`, `refactor(...)`, `docs(...)`, `chore(...)`, `style(...)`, `test(...)`).
+  - Aturan ini tetap tunduk pada **STRICT GIT COMMAND BAN**: agen HANYA menyediakan teks/rekomendasi perintah untuk dijalankan mandiri oleh USER, dan **DILARANG** mengeksekusinya sendiri di terminal.
+
+
 
