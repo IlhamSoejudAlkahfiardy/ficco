@@ -6,12 +6,14 @@ import { invoiceRepository } from '@/infrastructure/database/repositories/invoic
 import { customerRepository } from '@/infrastructure/database/repositories/customer-repository';
 import { Invoice, Customer, InvoiceStatus } from '@/infrastructure/database/schema';
 import { INVOICE_STATUS_CONFIG } from '../_types/invoice.types';
-import { InvoiceDomainService } from '../_services/invoice-domain-service';
+import { InvoiceDomainService, InvoiceFullDetails } from '../_services/invoice-domain-service';
 import { PaymentService } from '../_services/payment-service';
 import { InvoiceDetailDrawer } from './invoice-detail-drawer';
 import { PaymentModal } from './payment-modal';
+import { InvoicePreviewModal } from './invoice-preview-modal';
 import { AppSelect } from '@/shared/_components/select';
 import { Icons } from '@/shared/_components/icons';
+
 import { isDevelopmentMode } from '@/shared/_utils/env';
 import { generateInvoiceDummy, generateCustomerDummy } from '@/shared/_utils/dev-data-generator';
 import { CustomerService } from '@/features/customers';
@@ -62,6 +64,24 @@ export const InvoiceListView: React.FC = () => {
       remainingBalance: summary?.remainingBalance ?? item.invoice.total,
     });
   };
+
+  // Preview Modal state
+  const [previewDetails, setPreviewDetails] = useState<InvoiceFullDetails | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+
+  const handleOpenPreview = async (invoiceId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const full = await InvoiceDomainService.getFullDetails(invoiceId);
+      if (full) {
+        setPreviewDetails(full);
+        setIsPreviewOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to open invoice preview', err);
+    }
+  };
+
 
   // Load all invoices and customers from IndexedDB
   const loadInvoices = useCallback(async () => {
@@ -489,6 +509,16 @@ export const InvoiceListView: React.FC = () => {
                               <Icons.eye size={15} />
                             </button>
 
+                            {/* Preview / PDF button */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenPreview(invoice.id, e)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                              title="Pratinjau / Cetak PDF"
+                            >
+                              <Icons.reports size={15} />
+                            </button>
+
                             {/* Quick Record Payment */}
                             {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
                               <button
@@ -584,6 +614,13 @@ export const InvoiceListView: React.FC = () => {
                         className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
                       >
                         Detail
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenPreview(invoice.id, e)}
+                        className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800"
+                      >
+                        PDF
                       </button>
                       {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
                         <button
@@ -742,6 +779,13 @@ export const InvoiceListView: React.FC = () => {
           }}
         />
       )}
+
+      {/* Invoice Document Preview Modal */}
+      <InvoicePreviewModal
+        isOpen={isPreviewOpen}
+        details={previewDetails}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </div>
   );
 };

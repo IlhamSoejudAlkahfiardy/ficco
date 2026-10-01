@@ -4,6 +4,8 @@ import { productRepository } from './repositories/product-repository';
 import { invoiceRepository } from './repositories/invoice-repository';
 import { CURRENT_DB_VERSION } from './migrations';
 import { runInvoiceDomainUnitTests } from '@/features/invoices/_utils/invoice-calculations.test';
+import { runInvoicePdfUnitTests } from '@/features/invoices/_utils/invoice-pdf.test';
+
 
 export interface DiagnosticResult {
   step: string;
@@ -178,6 +180,15 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       passed: domainTestSummary.failedCount === 0,
       message: `${domainTestSummary.passedCount}/${domainTestSummary.total} unit tests passed (Calculations, Status, Precision, & Numbering).`,
     });
+
+    // 8. Test Client-Side Invoice PDF Generation (Step 13)
+    const pdfTestSummary = runInvoicePdfUnitTests();
+    results.push({
+      step: 'Invoice PDF Engine Unit Tests',
+      passed: pdfTestSummary.failedCount === 0,
+      message: `${pdfTestSummary.passedCount}/${pdfTestSummary.total} unit tests passed (PDF 1.4 Binary, Vector Layout, Resilience, & Multi-Page).`,
+    });
+
 
     const allPassed = results.every((r) => r.passed);
     return {

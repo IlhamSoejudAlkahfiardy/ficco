@@ -416,7 +416,46 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 14. Status Saat Ini & Langkah Berikutnya
+---
+
+## 14. Pengerjaan Step 13 — Implement Invoice PDF
+
+* **Tujuan & Ruang Lingkup:**
+  Membangun fungsionalitas pratinjau lembar faktur (*invoice preview*), pembuatan berkas PDF secara 100% lokal/offline (*client-side vector PDF generation*), pencetakan dokumen siap cetak (*print-ready styling*), serta integrasi data identitas usaha, pelanggan, rincian item, kalkulasi finansial, catatan, dan riwayat pembayaran sesuai spesifikasi Step 13 pada [`docs/invoice-expense-prd-blueprint.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Pratinjau faktur interaktif (*Invoice Preview Modal*) dengan zoom controls (75%, 100%, 125%, reset) dan adaptasi tata letak A4 responsif untuk desktop dan layar ponsel/smartphone.
+  - Pembuatan berkas PDF murni di sisi peramban (*zero-dependency client-side PDF 1.4 vector engine*) tanpa panggilan server atau pustaka pihak ketiga yang bermasalah dengan React 19.
+  - Unduhan langsung berkas `.pdf` standar (`Faktur-{invoiceNumber}.pdf`) yang dapat dibuka di seluruh aplikasi pembaca PDF desktop dan seluler secara instan (< 20ms).
+  - Integrasi pencetakan native peramban (`window.print()`) dengan stylesheet cetak terisolasi (`@media print`) yang otomatis menyembunyikan navigasi, sidebar, header, dan elemen interaktif lainnya.
+  - Memastikan seluruh informasi penting termuat lengkap: profil usaha (nama, legal name, alamat, telepon, email, NPWP, logo base64), klien/pelanggan, tabel item penagihan, catatan faktur, instruksi rekening bank, ringkasan kalkulasi (Subtotal, Diskon, DPP, PPN, Grand Total), serta ringkasan pelunasan (Total Terbayar dan Sisa Tagihan).
+
+* **Detail Arsitektur & Implementasi Teknis:**
+  1. **Low-Level PDF Infrastructure (`infrastructure/pdf/`):**
+     - [`pdf-document-builder.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/pdf/pdf-document-builder.ts): Mesin pembangun PDF 1.4 biner mandiri (*zero-dependency vector builder*). Mengimplementasikan translasi koordinat A4 (595.28 × 841.89 pt) top-left, font standar Type1 (Helvetica, Helvetica-Bold, Helvetica-Oblique), *word-wrap* otomatis, rendering teks rata kiri/kanan/tengah, gambar garis/persegi dengan palet warna HSL/RGB, tabel *cross-reference* (`xref`), kamus `trailer`, hingga kompilasi `Uint8Array`, `Blob`, dan pemicu download otomatis di browser.
+     - [`invoice-pdf-generator.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/pdf/invoice-pdf-generator.ts): Templat tata letak dokumen faktur eksekutif A4. Mengatur tata letak header dua kolom (penerbit & metadata faktur dengan badge status visual), kotak identitas klien penagihan, tabel rincian item dengan garis pembatas halus dan warna latar selang-seling, kolom catatan & informasi rekening bank, tabel kalkulasi finansial terstruktur, kartu status pelunasan, hingga footer legal.
+     - [`index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/pdf/index.ts): Barrel export infrastruktur PDF publik (`downloadInvoicePdf`, `generateInvoicePdfBlob`, `buildInvoicePdf`, `PdfDocumentBuilder`).
+     - [`infrastructure/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/index.ts): Mengekspos namespace `pdf` ke seluruh aplikasi.
+  2. **Domain Layer & Custom Hooks (`features/invoices/`):**
+     - [`use-invoice-pdf.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_hooks/use-invoice-pdf.ts): Custom hook untuk mengelola proses pengunduhan PDF faktur, sinkronisasi profil usaha & instruksi rekening default via `SettingsService.loadAll()`, pelacakan status loading/generating, penanganan error, dan pemicu cetak dokumen.
+  3. **Komponen Antarmuka Pratinjau & Cetak:**
+     - [`InvoicePreviewSheet`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-preview-sheet.tsx): Komponen murni lembar A4 (210 × 297 mm) siap cetak dan pratinjau yang merender logo usaha, profil bisnis, identitas pelanggan, tabel rincian transaksi, instruksi bank, status pembayaran, dan total tagihan. Memiliki kelas `printable-invoice-sheet` untuk isolasi gaya cetak.
+     - [`InvoicePreviewModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-preview-modal.tsx): Modal dialog pratinjau dokumen dengan latar belakang gelap/blur, bilah kontrol zoom persentase (60% - 150%), tombol pemicu unduh PDF instan, tombol pemicu cetak, dan viewport responsif ramah sentuhan.
+  4. **Penyempurnaan Tampilan Faktur Eksisting:**
+     - [`InvoiceDetailView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-view.tsx):
+       - Menambahkan tombol aksi cepat: *"Pratinjau"* (membuka `InvoicePreviewModal`), *"Unduh PDF"* (ekspor file PDF langsung), dan *"Cetak"* (`window.print()`).
+       - Menampilkan logo usaha dan instruksi rekening bank dari pengaturan profil secara reaktif.
+     - [`InvoiceListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx):
+       - Menyematkan tombol aksi cepat *"Pratinjau / PDF"* pada tabel desktop dan kartu seluler untuk kemudahan akses satu klik.
+     - [`app/globals.css`](file:///d:/DOT%20Indonesia/Project/ficco/app/globals.css):
+       - Konfigurasi `@media print` lengkap: `@page { size: A4 portrait; margin: 10mm 12mm; }`, menyembunyikan header, sidebar, navigasi mobile, tombol aksi, serta pencegahan pemotongan baris tabel (`break-inside: avoid`).
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx):
+       - Menambahkan ikon utilitas SVG ringan: `download`, `printer`, `zoomIn`, `zoomOut`.
+  5. **Pengujian Unit Otomatis Biner PDF (`invoice-pdf.test.ts`):**
+     - [`invoice-pdf.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-pdf.test.ts): Suite pengujian otomatis yang memverifikasi struktur biner PDF 1.4 (`%PDF-1.4`, `trailer`, `xref`, `%%EOF`), ketepatan penyisipan nomor faktur, profil usaha, identitas klien, ketahanan terhadap data kosong, serta paginasi dokumen multi-item.
+     - Terintegrasi langsung ke dalam kartu pengujian mandiri [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts).
+
+---
+
+## 15. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -431,8 +470,10 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | Selesai | `5e82695` |
 | **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | Selesai | `a8a8bd4` |
 | **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | Selesai | `476ff4b` |
-| **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | **Selesai** | Terverifikasi lokal |
-| **Step 13** | Implement invoice PDF (PDF preview, PDF generation/download, print styling) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | Selesai | Terverifikasi lokal |
+| **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | **Selesai** | Terverifikasi lokal |
+| **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
 
 

@@ -32,3 +32,50 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Print styling for Invoice Documents (Step 13) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide navigation, sidebar, header, bottom nav, buttons, and drawers */
+  header,
+  aside,
+  nav,
+  button,
+  .print\:hidden,
+  [data-shell-sidebar],
+  [data-shell-header],
+  [data-shell-bottom-nav] {
+    display: none !important;
+  }
+
+  /* Printable invoice sheet takes natural page layout without borders or shadows */
+  .printable-invoice-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    background: transparent !important;
+  }
+
+  /* Prevent page breaks inside table rows and critical summary blocks */
+  tr, .avoid-break-inside {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+

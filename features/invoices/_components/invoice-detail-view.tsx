@@ -4,11 +4,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { InvoiceDomainService, InvoiceFullDetails } from '../_services/invoice-domain-service';
-import { settingsRepository } from '@/infrastructure/database/repositories/settings-repository';
+import { SettingsService } from '@/features/settings/_services/settings-service';
+import { CompanyProfile } from '@/features/settings/_types/settings.types';
 import { INVOICE_STATUS_CONFIG, InvoiceStatus } from '../_types/invoice.types';
 import { Icons } from '@/shared/_components/icons';
 import { PaymentModal } from './payment-modal';
 import { PaymentHistoryCard } from './payment-history-card';
+import { InvoicePreviewModal } from './invoice-preview-modal';
+import { useInvoicePdf } from '../_hooks/use-invoice-pdf';
 
 interface InvoiceDetailViewProps {
   invoiceId: string;
@@ -28,34 +31,33 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   const router = useRouter();
 
   const [details, setDetails] = useState<InvoiceFullDetails | null>(null);
-  const [companyProfile, setCompanyProfile] = useState<{
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    taxNumber?: string;
-  } | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [paymentInstructions, setPaymentInstructions] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
+
+  const { isGenerating: isDownloadingPdf, downloadPdf, printInvoice } = useInvoicePdf();
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [invoiceDetails, profile] = await Promise.all([
+      const [invoiceDetails, settings] = await Promise.all([
         InvoiceDomainService.getFullDetails(invoiceId),
-        settingsRepository.get<any>('company_profile'),
+        SettingsService.loadAll(),
       ]);
 
       if (!invoiceDetails) {
         setError('Faktur tidak ditemukan atau telah dihapus.');
       } else {
         setDetails(invoiceDetails);
-        setCompanyProfile(profile);
+        setCompanyProfile(settings.company);
+        setPaymentInstructions(settings.invoiceDefaults.paymentInstructions || '');
       }
     } catch (err) {
       console.error('Failed to load invoice details', err);
@@ -64,6 +66,7 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
       setIsLoading(false);
     }
   }, [invoiceId]);
+
 
   useEffect(() => {
     loadData();
@@ -223,14 +226,42 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
             </button>
           )}
 
-          {/* Print / PDF */}
+          {/* Preview Invoice Document */}
           <button
             type="button"
-            onClick={handlePrint}
+            onClick={() => setIsPreviewModalOpen(true)}
             className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5 shadow-xs"
+            title="Pratinjau Lembar Dokumen Faktur"
           >
-            <Icons.reports size={14} />
-            <span>Cetak Faktur</span>
+            <Icons.eye size={14} />
+            <span>Pratinjau</span>
+          </button>
+
+          {/* Direct PDF Download */}
+          <button
+            type="button"
+            disabled={isDownloadingPdf}
+            onClick={() => downloadPdf(details)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+            title="Unduh Berkas PDF Offline"
+          >
+            {isDownloadingPdf ? (
+              <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Icons.download size={14} />
+            )}
+            <span>{isDownloadingPdf ? 'Menghasilkan...' : 'Unduh PDF'}</span>
+          </button>
+
+          {/* Print / Save as PDF */}
+          <button
+            type="button"
+            onClick={printInvoice}
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5 shadow-xs"
+            title="Cetak Faktur atau Simpan via Print Browser"
+          >
+            <Icons.printer size={14} />
+            <span>Cetak</span>
           </button>
 
           {/* Edit */}
@@ -284,13 +315,28 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
         {/* Document Header (Seller & Document Info) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-start pb-6 border-b border-slate-100 dark:border-zinc-800">
           {/* Seller / Company */}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
+            {companyProfile?.logo && (
+              <div className="mb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={companyProfile.logo}
+                  alt={companyProfile.name || 'Logo'}
+                  className="h-10 max-w-[160px] object-contain"
+                />
+              </div>
+            )}
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
               Penerbit Faktur
             </span>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              {companyProfile?.companyName || 'Usaha / Perusahaan Anda'}
+              {companyProfile?.name || companyProfile?.legalName || 'Usaha / Perusahaan Anda'}
             </h2>
+            {companyProfile?.legalName && companyProfile.legalName !== companyProfile.name && (
+              <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                {companyProfile.legalName}
+              </p>
+            )}
             {companyProfile?.address && (
               <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
                 {companyProfile.address}
@@ -413,6 +459,18 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
             ) : (
               <p className="text-xs text-slate-400 italic">Tidak ada catatan penagihan khusus.</p>
             )}
+
+            {paymentInstructions && (
+              <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
+                  Instruksi Rekening Pembayaran:
+                </span>
+                <p className="text-xs text-slate-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed font-mono">
+                  {paymentInstructions}
+                </p>
+              </div>
+            )}
+
 
             {/* Payment Balance Box */}
             <div className="p-4 rounded-xl border border-slate-200/60 dark:border-zinc-800 space-y-2 text-xs">
@@ -557,6 +615,15 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Invoice Document Preview Modal */}
+      <InvoicePreviewModal
+        isOpen={isPreviewModalOpen}
+        details={details}
+        onClose={() => setIsPreviewModalOpen(false)}
+      />
     </div>
   );
 };
+
+
