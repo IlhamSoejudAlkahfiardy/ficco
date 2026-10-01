@@ -7,6 +7,8 @@ import { ProductDeleteDialog } from './product-delete-dialog';
 import { ProductFilterStatus, ProductSortBy } from '../_types/product.types';
 import { Icons } from '@/shared/_components/icons';
 import { AppSelect } from '@/shared';
+import { isDevelopmentMode } from '@/shared/_utils/env';
+import { generateProductDummy } from '@/shared/_utils/dev-data-generator';
 
 export const ProductListView: React.FC = () => {
   const {
@@ -38,6 +40,11 @@ export const ProductListView: React.FC = () => {
     toggleStatus,
     seedSampleData,
   } = useProducts();
+
+  const handleQuickGenerate = async () => {
+    const dummy = generateProductDummy();
+    await saveProduct(dummy);
+  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -84,6 +91,19 @@ export const ProductListView: React.FC = () => {
               className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
             >
               + Muat Contoh Data
+            </button>
+          )}
+
+          {isDevelopmentMode() && (
+            <button
+              type="button"
+              onClick={handleQuickGenerate}
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+              title="Mode Development: Buat 1 data produk instan tanpa form"
+            >
+              <Icons.zap size={14} />
+              <span>Generate Data</span>
             </button>
           )}
 

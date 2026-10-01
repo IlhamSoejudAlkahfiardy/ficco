@@ -8,6 +8,8 @@ import { CustomerDeleteDialog } from './customer-delete-dialog';
 import { CustomerSortBy } from '../_types/customer.types';
 import { Icons } from '@/shared/_components/icons';
 import { AppSelect } from '@/shared';
+import { isDevelopmentMode } from '@/shared/_utils/env';
+import { generateCustomerDummy } from '@/shared/_utils/dev-data-generator';
 
 export const CustomerListView: React.FC = () => {
   const {
@@ -43,6 +45,11 @@ export const CustomerListView: React.FC = () => {
     seedSampleData,
   } = useCustomers();
 
+  const handleQuickGenerate = async () => {
+    const dummy = generateCustomerDummy();
+    await saveCustomer(dummy);
+  };
+
   const formatDate = (dateStr: string) => {
     try {
       return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -77,6 +84,19 @@ export const CustomerListView: React.FC = () => {
               className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors"
             >
               + Muat Contoh Data
+            </button>
+          )}
+
+          {isDevelopmentMode() && (
+            <button
+              type="button"
+              onClick={handleQuickGenerate}
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+              title="Mode Development: Buat 1 data pelanggan instan tanpa form"
+            >
+              <Icons.zap size={14} />
+              <span>Generate Data</span>
             </button>
           )}
 

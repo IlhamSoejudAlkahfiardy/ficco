@@ -6,6 +6,8 @@ import { Product, COMMON_UNITS } from '../_types/product.types';
 import { ProductFormData } from '../_schemas/product.schemas';
 import { Icons } from '@/shared/_components/icons';
 import { AppSelect } from '@/shared';
+import { isDevelopmentMode } from '@/shared/_utils/env';
+import { generateProductDummy } from '@/shared/_utils/dev-data-generator';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     defaultValues: {
@@ -39,6 +42,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       active: true,
     },
   });
+
+  const handleGenerateDummy = () => {
+    const dummy = generateProductDummy();
+    setValue('name', dummy.name, { shouldValidate: true });
+    setValue('sku', dummy.sku, { shouldValidate: true });
+    setValue('description', dummy.description, { shouldValidate: true });
+    setValue('unit', dummy.unit, { shouldValidate: true });
+    setValue('price', dummy.price, { shouldValidate: true });
+    setValue('taxRate', dummy.taxRate, { shouldValidate: true });
+    setValue('active', dummy.active, { shouldValidate: true });
+  };
 
   useEffect(() => {
     if (editingProduct) {
@@ -81,14 +95,27 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 : 'Daftarkan item atau jasa baru ke katalog lokal Anda'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <Icons.close size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isDevelopmentMode() && (
+              <button
+                type="button"
+                onClick={handleGenerateDummy}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                title="Mode Development: Isi data produk dummy otomatis"
+              >
+                <Icons.zap size={13} />
+                <span>Generate Data</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <Icons.close size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}

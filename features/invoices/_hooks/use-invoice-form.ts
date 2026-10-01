@@ -15,6 +15,8 @@ import {
 } from '../_utils/invoice-calculations';
 import { InvoiceDomainService } from '../_services/invoice-domain-service';
 import { InvoiceCalculationResult } from '../_types/invoice.types';
+import { generateCustomerDummy } from '@/shared/_utils/dev-data-generator';
+import { CustomerService } from '@/features/customers';
 
 export interface UseInvoiceFormOptions {
   invoiceId?: string;
@@ -319,6 +321,56 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
     }
   }, [setValue]);
 
+  const fillDummyData = useCallback(async () => {
+    try {
+      let activeCustomerId = watch('customerId');
+      if (!activeCustomerId || activeCustomerId === '') {
+        if (customers.length > 0) {
+          activeCustomerId = customers[0].id;
+          setValue('customerId', activeCustomerId, { shouldValidate: true });
+        } else {
+          // create a dummy customer first
+          const dummyCust = generateCustomerDummy();
+          const createdCust = await CustomerService.create(dummyCust);
+          await refreshCustomers(createdCust.id);
+          activeCustomerId = createdCust.id;
+        }
+      }
+
+      // Generate items
+      setValue(
+        'items',
+        [
+          {
+            productId: '',
+            description: 'Jasa Konsultasi IT & Pengembangan Web (Generated Data)',
+            quantity: 1,
+            unitPrice: 4500000,
+            discount: 0,
+            taxRate: 11,
+          },
+          {
+            productId: '',
+            description: 'Maintenance Server Cloud Bulanan (Generated Data)',
+            quantity: 2,
+            unitPrice: 750000,
+            discount: 5,
+            taxRate: 11,
+          },
+        ],
+        { shouldValidate: true }
+      );
+
+      setValue(
+        'notes',
+        'Terima kasih atas kerja samanya. Pembayaran dapat ditransfer ke rekening BCA 1234567890 a/n PT Ficco Nusantara (Generated Data).',
+        { shouldValidate: true }
+      );
+    } catch (err) {
+      console.error('Failed to fill dummy data', err);
+    }
+  }, [customers, refreshCustomers, setValue, watch]);
+
   return {
     // Form handlers & state
     register,
@@ -334,6 +386,7 @@ export function useInvoiceForm(options?: UseInvoiceFormOptions) {
     setDueDatePreset,
     refreshInvoiceNumber,
     saveInvoice,
+    fillDummyData,
 
     // State
     isEditMode: Boolean(options?.invoiceId),

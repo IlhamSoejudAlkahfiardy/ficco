@@ -12,6 +12,9 @@ import { InvoiceDetailDrawer } from './invoice-detail-drawer';
 import { PaymentModal } from './payment-modal';
 import { AppSelect } from '@/shared/_components/select';
 import { Icons } from '@/shared/_components/icons';
+import { isDevelopmentMode } from '@/shared/_utils/env';
+import { generateInvoiceDummy, generateCustomerDummy } from '@/shared/_utils/dev-data-generator';
+import { CustomerService } from '@/features/customers';
 
 interface InvoiceWithCustomer {
   invoice: Invoice;
@@ -83,6 +86,36 @@ export const InvoiceListView: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
+
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState<boolean>(false);
+
+  const handleQuickGenerateInvoice = async () => {
+    setIsGeneratingInvoice(true);
+    try {
+      let allCusts = await customerRepository.getAll();
+      let targetCustomerId = '';
+      if (allCusts.length === 0) {
+        const dummyCust = generateCustomerDummy();
+        const createdCustomer = await CustomerService.create(dummyCust);
+        targetCustomerId = createdCustomer.id;
+      } else {
+        targetCustomerId = allCusts[Math.floor(Math.random() * allCusts.length)].id;
+      }
+
+      const dummyInv = generateInvoiceDummy([targetCustomerId]);
+      await InvoiceDomainService.createInvoice({
+        ...dummyInv,
+        customerId: targetCustomerId,
+        status: 'sent',
+      });
+
+      await loadInvoices();
+    } catch (err) {
+      console.error('Failed to quick generate invoice', err);
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
 
   useEffect(() => {
     loadInvoices();
@@ -218,13 +251,28 @@ export const InvoiceListView: React.FC = () => {
             Kelola pembuatan, pelacakan, dan status penagihan faktur secara lokal di IndexedDB.
           </p>
         </div>
-        <Link
-          href="/invoices/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs hover:shadow-sm transition-all self-start sm:self-auto"
-        >
-          <Icons.plus size={16} />
-          <span>Buat Faktur Baru</span>
-        </Link>
+        <div className="flex items-center gap-2.5">
+          {isDevelopmentMode() && (
+            <button
+              type="button"
+              onClick={handleQuickGenerateInvoice}
+              disabled={isGeneratingInvoice}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 font-semibold text-xs transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              title="Mode Development: Terbitkan 1 faktur dummy lengkap instan ke IndexedDB"
+            >
+              <Icons.zap size={14} />
+              <span>{isGeneratingInvoice ? 'Membuat...' : 'Generate Faktur'}</span>
+            </button>
+          )}
+
+          <Link
+            href="/invoices/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-xs hover:shadow-sm transition-all self-start sm:self-auto"
+          >
+            <Icons.plus size={16} />
+            <span>Buat Faktur Baru</span>
+          </Link>
+        </div>
       </div>
 
       {/* Summary Metrics */}

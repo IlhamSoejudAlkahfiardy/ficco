@@ -8,6 +8,8 @@ import { Icons } from '@/shared/_components/icons';
 import { PAYMENT_METHODS } from '../_types/payment.types';
 import { PaymentFormData, paymentSchema } from '../_schemas/payment.schemas';
 import { PaymentService } from '../_services/payment-service';
+import { isDevelopmentMode } from '@/shared/_utils/env';
+import { generatePaymentDummy } from '@/shared/_utils/dev-data-generator';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -74,6 +76,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setValue('amount', Math.max(0, remainingBalance));
   };
 
+  const handleGenerateDummy = () => {
+    const dummy = generatePaymentDummy(invoiceId, remainingBalance);
+    setValue('amount', dummy.amount, { shouldValidate: true });
+    setValue('paymentMethod', dummy.paymentMethod, { shouldValidate: true });
+    setValue('paymentDate', dummy.paymentDate, { shouldValidate: true });
+    setValue('notes', dummy.notes, { shouldValidate: true });
+  };
+
   const onSubmit = async (data: PaymentFormData) => {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -128,14 +138,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <Icons.close size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isDevelopmentMode() && (
+              <button
+                type="button"
+                onClick={handleGenerateDummy}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                title="Mode Development: Isi data pembayaran dummy otomatis"
+              >
+                <Icons.zap size={13} />
+                <span>Generate Data</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <Icons.close size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Invoice Balance Summary Banner */}

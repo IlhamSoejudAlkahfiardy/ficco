@@ -10,6 +10,7 @@ import { CustomerFormModal } from '@/features/customers/_components/customer-for
 import { CustomerService } from '@/features/customers/_services/customer-service';
 import { CustomerFormData } from '@/features/customers/_schemas/customer.schemas';
 import { calculateLineItem } from '../_utils/invoice-calculations';
+import { isDevelopmentMode } from '@/shared/_utils/env';
 
 export interface InvoiceFormViewProps {
   invoiceId?: string;
@@ -30,6 +31,7 @@ export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId })
     setDueDatePreset,
     refreshInvoiceNumber,
     saveInvoice,
+    fillDummyData,
     isEditMode,
     isLoadingInit,
     isSubmitting,
@@ -120,6 +122,19 @@ export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId })
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
+          {isDevelopmentMode() && !isEditMode && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={fillDummyData}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              title="Mode Development: Isi form dengan data dummy otomatis"
+            >
+              <Icons.zap size={14} />
+              <span>Generate Data</span>
+            </button>
+          )}
+
           <button
             type="button"
             disabled={isSubmitting}

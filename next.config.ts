@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Expose DEVELOPMENT to client-side code even when defined without NEXT_PUBLIC_
+  env: {
+    DEVELOPMENT: process.env.DEVELOPMENT,
+  },
   // Allow cross-origin requests from ngrok tunnels and local network IPs in development
   allowedDevOrigins: [
     '*.ngrok-free.app',
