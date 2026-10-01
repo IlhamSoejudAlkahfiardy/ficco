@@ -240,7 +240,7 @@ export function runInvoiceDomainUnitTests(): {
   });
 
   // ==========================================
-  // Suite 4: Payment Balance Calculation
+  // Suite 4: Payment Balance Calculation & Lifecycle
   // ==========================================
   runTest('Payment Balance Calculation', 'correctly sums payment records and computes balance', () => {
     const balance = calculatePaymentBalance(
@@ -254,6 +254,63 @@ export function runInvoiceDomainUnitTests(): {
     assertEqual(balance.isPartiallyPaid, true, 'Is partially paid');
     assertEqual(balance.isFullyPaid, false, 'Is not fully paid');
     assertEqual(balance.isOverdue, false, 'Is not overdue');
+  });
+
+  runTest('Payment Balance Calculation', 'acceptance: 0 payment -> unpaid / open', () => {
+    const balance = calculatePaymentBalance(1000000, [], '2026-10-31', '2026-09-28');
+    assertEqual(balance.totalPaid, 0, 'Total paid must be 0');
+    assertEqual(balance.remainingBalance, 1000000, 'Remaining balance must equal full total');
+    assertEqual(balance.isPartiallyPaid, false, '0 payment is not partially paid');
+    assertEqual(balance.isFullyPaid, false, '0 payment is not fully paid');
+    assertEqual(balance.isOverdue, false, 'Before due date is not overdue');
+  });
+
+  runTest('Payment Balance Calculation', 'acceptance: partial payment -> partially paid', () => {
+    const balance = calculatePaymentBalance(
+      2000000,
+      [{ amount: 750000 }],
+      '2026-10-31',
+      '2026-09-28'
+    );
+    assertEqual(balance.totalPaid, 750000, 'Total paid matches installment');
+    assertEqual(balance.remainingBalance, 1250000, 'Remaining balance is 2M - 750k = 1.25M');
+    assertEqual(balance.isPartiallyPaid, true, 'Flag isPartiallyPaid must be true');
+    assertEqual(balance.isFullyPaid, false, 'Flag isFullyPaid must be false');
+  });
+
+  runTest('Payment Balance Calculation', 'acceptance: full payment -> paid', () => {
+    const balance = calculatePaymentBalance(
+      1000000,
+      [{ amount: 400000 }, { amount: 600000 }],
+      '2026-10-31',
+      '2026-09-28'
+    );
+    assertEqual(balance.totalPaid, 1000000, 'Total paid equals total');
+    assertEqual(balance.remainingBalance, 0, 'Remaining balance must be 0');
+    assertEqual(balance.isFullyPaid, true, 'Flag isFullyPaid must be true');
+    assertEqual(balance.isPartiallyPaid, false, 'Full payment is not partially paid');
+  });
+
+  runTest('Payment Balance Calculation', 'acceptance: past due + unpaid -> overdue', () => {
+    const balance = calculatePaymentBalance(
+      1000000,
+      [{ amount: 200000 }],
+      '2026-09-01', // past due date
+      '2026-09-28' // today
+    );
+    assertEqual(balance.isOverdue, true, 'Unpaid past due invoice must be marked overdue');
+    assertEqual(balance.isFullyPaid, false, 'Must not be fully paid');
+  });
+
+  runTest('Payment Balance Calculation', 'acceptance: past due + fully paid -> not overdue', () => {
+    const balance = calculatePaymentBalance(
+      1000000,
+      [{ amount: 1000000 }],
+      '2026-09-01', // past due date
+      '2026-09-28' // today
+    );
+    assertEqual(balance.isOverdue, false, 'Fully paid invoice must never be overdue');
+    assertEqual(balance.isFullyPaid, true, 'Must be fully paid');
   });
 
   // ==========================================

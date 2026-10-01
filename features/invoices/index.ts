@@ -10,3 +10,8 @@ export * from './_components/invoice-create-view';
 export * from './_components/invoice-list-view';
 export * from './_components/invoice-detail-view';
 export * from './_components/invoice-detail-drawer';
+export * from './_types/payment.types';
+export * from './_schemas/payment.schemas';
+export * from './_services/payment-service';
+export * from './_components/payment-modal';
+export * from './_components/payment-history-card';

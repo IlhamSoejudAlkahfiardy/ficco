@@ -7,7 +7,9 @@ import { customerRepository } from '@/infrastructure/database/repositories/custo
 import { Invoice, Customer, InvoiceStatus } from '@/infrastructure/database/schema';
 import { INVOICE_STATUS_CONFIG } from '../_types/invoice.types';
 import { InvoiceDomainService } from '../_services/invoice-domain-service';
+import { PaymentService } from '../_services/payment-service';
 import { InvoiceDetailDrawer } from './invoice-detail-drawer';
+import { PaymentModal } from './payment-modal';
 import { AppSelect } from '@/shared/_components/select';
 import { Icons } from '@/shared/_components/icons';
 
@@ -41,6 +43,22 @@ export const InvoiceListView: React.FC = () => {
   // Delete Dialog state
   const [deleteTarget, setDeleteTarget] = useState<InvoiceWithCustomer | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Quick Payment Modal state
+  const [paymentTarget, setPaymentTarget] = useState<{
+    invoice: Invoice;
+    customerName?: string;
+    remainingBalance: number;
+  } | null>(null);
+
+  const handleOpenPayment = async (item: InvoiceWithCustomer) => {
+    const summary = await PaymentService.getSummary(item.invoice.id);
+    setPaymentTarget({
+      invoice: item.invoice,
+      customerName: item.customer?.name,
+      remainingBalance: summary?.remainingBalance ?? item.invoice.total,
+    });
+  };
 
   // Load all invoices and customers from IndexedDB
   const loadInvoices = useCallback(async () => {
@@ -423,6 +441,18 @@ export const InvoiceListView: React.FC = () => {
                               <Icons.eye size={15} />
                             </button>
 
+                            {/* Quick Record Payment */}
+                            {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPayment(item)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                                title="Catat Pembayaran"
+                              >
+                                <Icons.creditCard size={15} />
+                              </button>
+                            )}
+
                             {/* Edit button */}
                             <Link
                               href={`/invoices/${invoice.id}/edit`}
@@ -507,6 +537,15 @@ export const InvoiceListView: React.FC = () => {
                       >
                         Detail
                       </button>
+                      {invoice.status !== 'cancelled' && invoice.status !== 'paid' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPayment(item)}
+                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800"
+                        >
+                          Bayar
+                        </button>
+                      )}
                       <Link
                         href={`/invoices/${invoice.id}/edit`}
                         className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
@@ -638,6 +677,24 @@ export const InvoiceListView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Quick Payment Modal */}
+      {paymentTarget && (
+        <PaymentModal
+          isOpen={Boolean(paymentTarget)}
+          invoiceId={paymentTarget.invoice.id}
+          invoiceNumber={paymentTarget.invoice.invoiceNumber}
+          customerName={paymentTarget.customerName}
+          totalAmount={paymentTarget.invoice.total}
+          remainingBalance={paymentTarget.remainingBalance}
+          onClose={() => setPaymentTarget(null)}
+          onPaymentSuccess={() => {
+            setPaymentTarget(null);
+            loadInvoices();
+          }}
+        />
+      )}
     </div>
   );
 };
+

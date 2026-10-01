@@ -7,6 +7,8 @@ import { InvoiceDomainService, InvoiceFullDetails } from '../_services/invoice-d
 import { settingsRepository } from '@/infrastructure/database/repositories/settings-repository';
 import { INVOICE_STATUS_CONFIG, InvoiceStatus } from '../_types/invoice.types';
 import { Icons } from '@/shared/_components/icons';
+import { PaymentModal } from './payment-modal';
+import { PaymentHistoryCard } from './payment-history-card';
 
 interface InvoiceDetailViewProps {
   invoiceId: string;
@@ -37,6 +39,7 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -208,6 +211,18 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Record Payment Button */}
+          {invoice.status !== 'cancelled' && !paymentSummary.isFullyPaid && (
+            <button
+              type="button"
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-xs"
+            >
+              <Icons.creditCard size={14} />
+              <span>Catat Pembayaran</span>
+            </button>
+          )}
+
           {/* Print / PDF */}
           <button
             type="button"
@@ -462,6 +477,40 @@ export const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Payment History & Management Section (Hidden during Print) */}
+      <div className="print:hidden">
+        <PaymentHistoryCard
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          total={invoice.total}
+          totalPaid={paymentSummary.totalPaid}
+          remainingBalance={paymentSummary.remainingBalance}
+          isFullyPaid={paymentSummary.isFullyPaid}
+          isCancelled={invoice.status === 'cancelled'}
+          payments={details.payments || []}
+          onRecordPaymentClick={() => setIsPaymentModalOpen(true)}
+          onPaymentChange={() => {
+            loadData();
+            if (onInvoiceUpdated) onInvoiceUpdated();
+          }}
+        />
+      </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        invoiceId={invoice.id}
+        invoiceNumber={invoice.invoiceNumber}
+        customerName={customer?.name}
+        totalAmount={invoice.total}
+        remainingBalance={paymentSummary.remainingBalance}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onPaymentSuccess={() => {
+          loadData();
+          if (onInvoiceUpdated) onInvoiceUpdated();
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

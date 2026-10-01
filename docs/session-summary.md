@@ -370,7 +370,53 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 13. Status Saat Ini & Langkah Berikutnya
+## 13. Pengerjaan Step 12 — Implement Payments
+
+* **Tujuan & Ruang Lingkup:**
+  Membangun manajemen pencatatan pembayaran faktur (*payment recording and tracking*) secara menyeluruh sesuai mandat Blueprint PRD Bagian 12. Fitur mencakup:
+  - Pencatatan pembayaran faktur (pembayaran penuh maupun bertahap/sebagian — *partial & full payments*).
+  - Dukungan metode pembayaran lengkap: Transfer Bank, Tunai, Kartu Kredit, QRIS, e-Wallet, Giro/Cek, dan Lainnya.
+  - Pembaruan status faktur otomatis (*automatic invoice status transition*) berdasarkan rekalkulasi saldo pembayaran:
+    - Belum ada pembayaran: status tetap draf/terkirim/menunggu (atau *overdue* jika melewati tanggal jatuh tempo).
+    - Pembayaran sebagian (`0 < totalPaid < grandTotal`): status otomatis menjadi `partially_paid` (atau *overdue* jika melewati tanggal jatuh tempo).
+    - Pembayaran lunas (`totalPaid >= grandTotal`): status otomatis menjadi `paid`.
+    - Pembatalan/penghapusan transaksi pembayaran: status dikembalikan (*rollback*) secara otomatis ke status sebelumnya yang valid.
+  - Riwayat pembayaran per faktur (*payment history*) dengan rincian tanggal pembayaran, metode, catatan/referensi transaksi, serta aksi penghapusan dengan modal konfirmasi aman.
+  - Integrasi antarmuka pada tampilan daftar faktur ([`InvoiceListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx)), laci rincian ([`InvoiceDetailDrawer`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-drawer.tsx)), dan halaman dokumen faktur ([`InvoiceDetailView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-view.tsx)).
+
+* **Detail Arsitektur & Implementasi Teknis:**
+  1. **Schema & Tipe Domain:**
+     - [`payment.schemas.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_schemas/payment.schemas.ts): Validasi Zod v4 `paymentFormSchema` dengan validasi jumlah pembayaran positif (`amount > 0`), pilihan metode pembayaran valid, tanggal pembayaran ISO string, serta catatan/referensi opsional.
+     - [`payment.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_types/payment.types.ts): Ekspor tipe domain `Payment`, `PaymentFormData`, konstanta opsi `PAYMENT_METHODS`, dan interface ringkasan saldo `PaymentSummary`.
+  2. **Payment Domain Service ([`PaymentService`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/payment-service.ts)):**
+     - `recordPayment(formData)`: Memvalidasi form, menyimpan data transaksi ke tabel IndexedDB `payments` via `paymentRepository`, dan otomatis memicu `InvoiceDomainService.refreshStatus(invoiceId)`.
+     - `deletePayment(paymentId)`: Menghapus catatan pembayaran dan otomatis memperbarui status faktur via `InvoiceDomainService.refreshStatus(invoiceId)` sehingga status melakukan rollback yang akurat.
+     - `getByInvoiceId(invoiceId)`: Mengambil seluruh transaksi pembayaran faktur dengan urutan tanggal terbaru.
+     - `getSummary(invoiceId)`: Menghitung total tagihan, total terbayar, sisa saldo (*remaining balance*), persentase pelunasan, dan status pelunasan faktur.
+  3. **Penyempurnaan Domain Faktur ([`InvoiceDomainService`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_services/invoice-domain-service.ts)):**
+     - Menambahkan array `payments` ke interface `InvoiceFullDetails` dan `getFullDetails(id)` agar riwayat pembayaran selalu terintegrasi dalam data rincian faktur.
+     - Memastikan `refreshStatus(id)` melakukan update status faktur di IndexedDB secara reaktif ketika pembayaran dicatat atau dihapus.
+  4. **Komponen Antarmuka Pembayaran:**
+     - **Modal Pencatatan Pembayaran ([`PaymentModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/payment-modal.tsx)):**
+       - Modal dialog interaktif dengan ringkasan sisa saldo faktur.
+       - Tombol cepat *"Lunasi Penuh"* yang otomatis mengisi jumlah sisa saldo ke input pembayaran.
+       - Pilihan metode pembayaran berbasis `AppSelect` (sinkron tema Dark/Light), pemilih tanggal HTML5, dan input catatan transaksi.
+     - **Kartu Riwayat Pembayaran ([`PaymentHistoryCard`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/payment-history-card.tsx)):**
+       - *Progress bar* visual persentase pelunasan faktur.
+       - 3 kartu ringkasan metrik: *Total Tagihan*, *Total Terbayar*, dan *Sisa Saldo*.
+       - Daftar transaksi pembayaran dengan badge metode, tanggal, catatan, dan tombol hapus per transaksi disertai modal konfirmasi.
+       - Tombol pemicu *"+ Catat Pembayaran"* yang otomatis dinonaktifkan jika faktur telah lunas atau dibatalkan (`cancelled`).
+  5. **Integrasi Halaman & Komponen Faktur:**
+     - [`InvoiceDetailView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-detail-view.tsx): Menyematkan tombol aksi cepat *"+ Catat Pembayaran"* pada baris aksi dokumen dan merender `PaymentHistoryCard` di bagian bawah dokumen faktur.
+     - [`InvoiceListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-list-view.tsx): Menyediakan tombol aksi cepat catat pembayaran (ikon dompet/kartu kredit) pada setiap baris tabel desktop dan kartu seluler yang belum lunas.
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG `creditCard` dan `receipt`.
+     - [`features/invoices/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/index.ts): Mengekspor seluruh modul pembayaran (`PaymentService`, `PaymentModal`, `PaymentHistoryCard`, skema, dan tipe).
+  6. **Pengujian Unit Otomatis ([`invoice-calculations.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_utils/invoice-calculations.test.ts)):**
+     - Memperluas Suite 4 untuk menguji semua kriteria penerimaan Step 12: transisi otomatis status faktur dari 0 pembayaran, pembayaran parsial, pembayaran lunas, jatuh tempo (*overdue*), hingga *draft*.
+
+---
+
+## 14. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -384,7 +430,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 8** | Implement product/service management (Katalog Barang/Jasa, SKU, Harga, Satuan, Pajak) | Selesai | Terverifikasi lokal |
 | **Step 9** | Implement invoice domain (Invoice & Item Schema, Calculation, Tax, Discount, Totals) | Selesai | `5e82695` |
 | **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | Selesai | `a8a8bd4` |
-| **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | **Selesai** | Terverifikasi lokal |
-| **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | Selesai | `476ff4b` |
+| **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | **Selesai** | Terverifikasi lokal |
+| **Step 13** | Implement invoice PDF (PDF preview, PDF generation/download, print styling) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
 

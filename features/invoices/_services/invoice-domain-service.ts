@@ -3,7 +3,7 @@ import { settingsRepository } from '@/infrastructure/database/repositories/setti
 import { paymentRepository } from '@/infrastructure/database/repositories/payment-repository';
 import { customerRepository } from '@/infrastructure/database/repositories/customer-repository';
 import { db } from '@/infrastructure/database/db';
-import { Invoice, InvoiceItem, InvoiceStatus } from '@/infrastructure/database/schema';
+import { Invoice, InvoiceItem, InvoiceStatus, Payment } from '@/infrastructure/database/schema';
 import {
   InvoiceCalculationInput,
   InvoiceCalculationResult,
@@ -34,6 +34,7 @@ export interface InvoiceFullDetails {
   };
   calculation: InvoiceCalculationResult;
   paymentSummary: InvoicePaymentSummary;
+  payments: Payment[];
 }
 
 export class InvoiceDomainService {
@@ -96,12 +97,17 @@ export class InvoiceDomainService {
       invoice.dueDate
     );
 
+    const sortedPayments = payments.sort(
+      (a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+    );
+
     return {
       invoice,
       items,
       customer,
       calculation,
       paymentSummary,
+      payments: sortedPayments,
     };
   }
 
