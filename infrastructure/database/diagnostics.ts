@@ -5,6 +5,7 @@ import { invoiceRepository } from './repositories/invoice-repository';
 import { CURRENT_DB_VERSION } from './migrations';
 import { runInvoiceDomainUnitTests } from '@/features/invoices/_utils/invoice-calculations.test';
 import { runInvoicePdfUnitTests } from '@/features/invoices/_utils/invoice-pdf.test';
+import { runExpenseDomainUnitTests } from '@/features/expenses/_utils/expense-calculations.test';
 
 
 export interface DiagnosticResult {
@@ -187,6 +188,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Invoice PDF Engine Unit Tests',
       passed: pdfTestSummary.failedCount === 0,
       message: `${pdfTestSummary.passedCount}/${pdfTestSummary.total} unit tests passed (PDF 1.4 Binary, Vector Layout, Resilience, & Multi-Page).`,
+    });
+
+    // 9. Test Expense Domain Unit Tests (Step 14)
+    const expenseTestSummary = runExpenseDomainUnitTests();
+    results.push({
+      step: 'Expense Domain Unit Tests',
+      passed: expenseTestSummary.failedCount === 0,
+      message: `${expenseTestSummary.passedCount}/${expenseTestSummary.total} unit tests passed (Totals, Breakdown, Date Filter, Search, & MoM Stats).`,
     });
 
 

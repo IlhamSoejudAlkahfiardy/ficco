@@ -455,7 +455,88 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 15. Status Saat Ini & Langkah Berikutnya
+## 16. Pengerjaan Step 14 — Implement Expense Management
+
+* **Tujuan & Ruang Lingkup:**
+  Membangun manajemen pencatatan beban dan pengeluaran operasional usaha (*expense management*) secara menyeluruh sesuai mandat Step 14 pada [`docs/invoice-expense-prd-blueprint.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md). Fitur mencakup:
+  - Manajemen kategori pengeluaran (*expense categories*): inisialisasi kategori standar otomatis, buat/edit/toggle aktif/hapus dengan proteksi integritas transaksi.
+  - Operasi CRUD pengeluaran (*expense CRUD*): catat pengeluaran baru, ubah, hapus, dan lihat rincian transaksi lengkap.
+  - Pengelolaan data finansial terstruktur: tanggal transaksi ISO YYYY-MM-DD, nominal beban (Rupiah), metode pembayaran terintegrasi, deskripsi pengeluaran, serta catatan/nomor struk/kuitansi.
+  - Mesin kalkulasi murni (*pure calculation engine*): total beban, rata-rata pengeluaran, agregasi persentase per kategori, perbandingan *month-over-month* (MoM), dan mitigasi ketidakakuratan *floating point*.
+  - Penyaringan dan pencarian multi-kriteria (*search & filters*): pencarian teks bebas (deskripsi, catatan, nama kategori), filter kategori, filter metode bayar, filter rentang tanggal (preset bulan ini, bulan lalu, tahun ini, semua waktu, kustom), dan multi-sorting.
+  - Integrasi antarmuka responsif desktop dan layar ponsel/smartphone dengan 4 kartu metrik eksekutif, modal pencatatan interaktif, laci rincian, dialog konfirmasi hapus aman, dan pengujian unit otomatis di browser.
+
+* **Detail Arsitektur & Implementasi Teknis:**
+  1. **Definisi Tipe Domain & Skema Validasi (`features/expenses/`):**
+     - [`expense.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_types/expense.types.ts):
+       - Re-export entitas database `Expense` dan `ExpenseCategory`.
+       - Tipe `ExpenseWithCategory` (resolusi entitas kategori terkait).
+       - Koleksi metode pembayaran [`EXPENSE_PAYMENT_METHODS`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_types/expense.types.ts#L18): Transfer Bank, Tunai / Kas Kecil, Kartu Kredit, Kartu Debit, QRIS, e-Wallet, Giro / Cek, dan Lainnya.
+       - Koleksi 8 kategori bawaan [`DEFAULT_EXPENSE_CATEGORIES`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_types/expense.types.ts#L34): Operasional Kantor, Gaji & Upah, Pemasaran & Iklan, Server & Software, Transportasi & Perjalanan, Pemeliharaan & Servis, Pajak & Legalitas, dan Lain-lain.
+       - Tipe kriteria filter `ExpenseFilter`, opsi pengurutan `ExpenseSortBy`, preset rentang tanggal `ExpenseDateRangePreset`, serta struktur metrik `ExpenseSummaryStats` & `CategoryBreakdownItem`.
+     - [`expense.schemas.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_schemas/expense.schemas.ts):
+       - `expenseSchema`: Validasi Zod v4 untuk kategori terpilih, deskripsi wajib (1-200 karakter), nominal belanja positif (`min: 1`, `max: 1.000.000.000.000`), tanggal format ISO `YYYY-MM-DD`, metode pembayaran valid, dan catatan opsional.
+       - `expenseCategorySchema`: Validasi Zod v4 untuk nama kategori (1-60 karakter), deskripsi opsional, dan status boolean `active`.
+  2. **Mesin Kalkulasi & Utilitas Filter Finansial (`expense-calculations.ts`):**
+     - [`expense-calculations.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_utils/expense-calculations.ts):
+       - `roundCurrency(amount, decimals)`: Mitigasi anomali presisi desimal JavaScript.
+       - `calculateExpenseTotals()`: Menghitung total nominal, jumlah transaksi, rata-rata per transaksi, nominal terendah, dan nominal tertinggi.
+       - `calculateCategoryBreakdown()`: Mengelompokkan beban per kategori, menghitung akumulasi nominal per kategori, dan menghitung persentase pangsa belanja relatif terhadap total.
+       - `getDateRangeBounds()`: Menghitung batas tanggal awal dan akhir berdasarkan preset kalender menggunakan pustaka `date-fns` (`startOfMonth`, `endOfMonth`, `subMonths`, `startOfYear`, `endOfYear`).
+       - `filterExpenses()`: Fungsi penyaringan murni untuk kata kunci pencarian, filter kategori, filter metode pembayaran, batas tanggal, dan pengurutan (terbaru, terlama, nominal terbesar/terkecil).
+       - `calculateExpenseSummary()`: Menghasilkan ringkasan komparasi bulan berjalan versus bulan sebelumnya (*month-over-month growth/reduction percentage*) dan kategori pengeluaran dominan.
+  3. **Lapisan Layanan Domain Local-First (`ExpenseDomainService`):**
+     - [`expense-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_services/expense-service.ts):
+       - Beroperasi langsung di atas `expenseRepository` dan `expenseCategoryRepository` pada IndexedDB.
+       - `seedDefaultCategoriesIfEmpty()`: Menjamin 8 kategori usaha standar otomatis tersedia pada inisialisasi awal.
+       - `seedSampleExpenses()`: Generator data dummy 4 transaksi beban operasional untuk pengujian instan.
+       - `getAllExpenses()`, `getExpenseById()`, `createExpense()`, `updateExpense()`, `deleteExpense()`.
+       - `getAllCategories()`, `createCategory()`, `updateCategory()`, `toggleCategoryActive()`.
+       - `deleteCategory()`: Dilindungi dengan pemeriksaan `getCategoryUsageCount()`. Mencegah penghapusan jika kategori sudah terikat pada transaksi pengeluaran aktif guna menjaga integritas data historis.
+       - `getSummaryStats()`: Mengambil ringkasan metrik eksekutif.
+  4. **Custom Hook Pengendali State (`useExpenses`):**
+     - [`use-expenses.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_hooks/use-expenses.ts):
+       - Mengatur sinkronisasi data reaktif antara IndexedDB dan antarmuka.
+       - Mengontrol parameter pencarian, filter kategori, filter metode, preset tanggal, custom range, dan pengurutan.
+       - Mengelola status paginasi (10 transaksi per halaman) dengan penyesuaian otomatis ke halaman 1 saat filter berubah.
+       - Mengendalikan status buka/tutup modal formulir, modal kelola kategori, dialog detail transaksi, dan konfirmasi hapus aman.
+  5. **Komponen Antarmuka Pengguna (`features/expenses/_components/`):**
+     - [`ExpenseListView`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_components/expense-list-view.tsx):
+       - 4 Kartu Metrik KPI: Total Beban Bulan Ini (+/- MoM %), Total Transaksi, Kategori Terbesar (Rp & %), Rata-rata per Pengeluaran.
+       - Bilah Filter & Pencarian: Input pencarian live dengan reset cepat, dropdown kategori `AppSelect`, dropdown rentang tanggal, pemilih metode pembayaran, dan dropdown sorting.
+       - Tabel Desktop: Desain modern bernuansa slate/zinc dengan badge kategori biru, badge metode bayar, nominal font tebal bernuansa rose/merah, serta tombol aksi cepat (Lihat, Edit, Hapus).
+       - Tampilan Kartu Ponsel: Tampilan kartu seluler responsif untuk kenyamanan satu tangan pada layar smartphone.
+       - Empty State Interaktif: Tombol "Catat Pengeluaran Pertama" dan "Muat Data Contoh".
+       - Kontrol Paginasi Cerdas: Navigasi halaman sebelumnya, halaman berikutnya, serta status total data.
+     - [`ExpenseFormModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_components/expense-form-modal.tsx):
+       - Modal dialog formulir catat/edit pengeluaran terintegrasi React Hook Form + Zod.
+       - Input tanggal HTML5, input nominal dengan helper pratinjau format Rupiah otomatis (Rp 1.500.000), pemilih kategori dengan pintasan tombol "Kelola Kategori", pemilih metode bayar `AppSelect`, deskripsi pengeluaran, dan textarea catatan/nomor struk. Dilengkapi tombol *Dev Sample* untuk pengujian cepat.
+     - [`ExpenseCategoryModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_components/expense-category-modal.tsx):
+       - Dialog modal untuk mengelola direktori kategori pengeluaran.
+       - Formulir inline tambah/edit kategori baru, daftar kategori dengan indikator aktif/non-aktif, tombol toggle status satu klik, tombol edit, dan tombol hapus disertai konfirmasi aman.
+     - [`ExpenseDetailModal`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_components/expense-detail-modal.tsx):
+       - Tampilan dialog detail rincian transaksi dengan kartu sorotan nominal besar, badge kategori, tanggal terformat, metode bayar, deskripsi lengkap, catatan, metadata timestamp, dan tombol aksi Edit / Hapus.
+     - [`ExpenseDeleteDialog`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_components/expense-delete-dialog.tsx):
+       - Dialog konfirmasi hapus permanen dengan rincian transaksi dan proteksi status loading.
+  6. **Rangkaian Pengujian Unit Otomatis & Diagnostik Sistem:**
+     - [`expense-calculations.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/_utils/expense-calculations.test.ts):
+       - Suite pengujian unit otomatis mandiri mencakup 6 suite pengujian:
+         1. *Suite 1 — Totals & Aggregations*: Perhitungan akumulasi jumlah, rata-rata, min, max, penanganan array kosong, dan presisi floating-point.
+         2. *Suite 2 — Category Breakdown*: Agregasi per kategori dan akurasi persentase pangsa beban.
+         3. *Suite 3 — Date Filtering*: Filter waktu berjalan (`this_month`), bulan lalu (`last_month`), tahun berjalan (`this_year`), dan batas tanggal kustom.
+         4. *Suite 4 — Search & Filter*: Pencarian teks bebas multi-kolom dan filter metode pembayaran.
+         5. *Suite 5 — Sorting*: Pengurutan nominal tertinggi/terendah dan tanggal transaksi.
+         6. *Suite 6 — Executive Summary*: Perhitungan komparasi bulanan MoM dan kategori belanja terbesar.
+       - Terintegrasi langsung sebagai langkah ke-9 pada diagnostik sistem di [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts).
+  7. **Ikon & Integrasi Halaman:**
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG ringan `calendar`, `tag`, `filter`, `wallet`, `trendingDown`.
+     - [`shared/_utils/dev-data-generator.ts`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_utils/dev-data-generator.ts): Menambahkan fungsi generator dummy `generateExpenseDummy`.
+     - [`features/expenses/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/expenses/index.ts): Barrel export lengkap modul pengeluaran.
+     - [`app/(customer)/expenses/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/expenses/page.tsx): Integrasi langsung me-render `ExpenseListView` dengan metadata SEO lengkap.
+
+---
+
+## 17. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -471,8 +552,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 10** | Implement invoice creation (Dynamic items, catalog picker, live totals, draft save) | Selesai | `a8a8bd4` |
 | **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | Selesai | `476ff4b` |
 | **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | Selesai | Terverifikasi lokal |
-| **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | **Selesai** | Terverifikasi lokal |
-| **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | Selesai | `0d3dea0` |
+| **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | **Selesai** | Terverifikasi lokal |
+| **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 

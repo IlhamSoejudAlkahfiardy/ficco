@@ -3,6 +3,7 @@ import type { CustomerFormData } from '@/features/customers';
 import type { ProductFormData } from '@/features/products';
 import type { InvoiceFormData, InvoiceItemFormData } from '@/features/invoices';
 import type { PaymentFormData } from '@/features/invoices';
+import type { ExpenseFormData } from '@/features/expenses';
 
 const SAMPLE_NAMES = [
   'Budi Santoso',
@@ -208,5 +209,31 @@ export function generatePaymentDummy(
     paymentDate: format(new Date(), 'yyyy-MM-dd'),
     paymentMethod: method,
     notes: `Pembayaran via ${method} (Generated Data).`,
+  };
+}
+
+/**
+ * Generate dummy Expense form data
+ */
+export function generateExpenseDummy(existingCategoryIds: string[] = []): ExpenseFormData {
+  const sampleDescriptions = [
+    { desc: 'Sewa Ruang Kantor Bulanan', amt: 4500000, method: 'bank_transfer' },
+    { desc: 'Biaya Langganan Vercel Pro & AWS', amt: 620000, method: 'credit_card' },
+    { desc: 'Pembelian Kertas HVS & Tinta Printer', amt: 275000, method: 'cash' },
+    { desc: 'Iklan Kampanye Media Sosial Instagram', amt: 1500000, method: 'credit_card' },
+    { desc: 'Konsumsi Rapat Evaluasi Proyek', amt: 185000, method: 'qris' },
+    { desc: 'Servis AC dan Perawatan Rutin Kantor', amt: 350000, method: 'bank_transfer' },
+  ];
+
+  const picked = getRandomItem(sampleDescriptions);
+  const now = new Date();
+
+  return {
+    description: picked.desc,
+    amount: picked.amt,
+    date: format(now, 'yyyy-MM-dd'),
+    categoryId: existingCategoryIds.length > 0 ? getRandomItem(existingCategoryIds) : '',
+    paymentMethod: picked.method,
+    notes: 'Beban operasional (Generated Data).',
   };
 }
