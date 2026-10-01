@@ -1,4 +1,4 @@
-import { buildInvoicePdf, generateInvoicePdfBlob } from '@/infrastructure/pdf';
+import { buildInvoicePdf } from '@/infrastructure/pdf';
 import { Invoice, InvoiceItem, Customer } from '@/infrastructure/database/schema';
 import { InvoiceCalculationResult, InvoicePaymentSummary } from '../_types/invoice.types';
 import { CompanyProfile } from '@/features/settings/_types/settings.types';
@@ -67,9 +67,8 @@ export function runInvoicePdfUnitTests(): {
       unitPrice: 1000000,
       discount: 50000,
       taxRate: 11,
+      subtotal: 1000000,
       total: 1054500,
-      createdAt: '2026-10-01T00:00:00Z',
-      updatedAt: '2026-10-01T00:00:00Z',
     },
   ];
 
@@ -96,23 +95,36 @@ export function runInvoicePdfUnitTests(): {
   };
 
   const sampleCalculation: InvoiceCalculationResult = {
+    lineItems: [
+      {
+        id: 'item-1',
+        description: 'Layanan Desain UI/UX & Prototipe Sistem',
+        quantity: 1,
+        unitPrice: 1000000,
+        discount: 50000,
+        taxRate: 11,
+        subtotal: 1000000,
+        taxAmount: 104500,
+        total: 1054500,
+      },
+    ],
     subtotal: 1000000,
-    itemDiscountsTotal: 50000,
+    lineItemDiscountsTotal: 50000,
+    lineItemTaxesTotal: 104500,
     invoiceDiscountAmount: 0,
     totalDiscount: 50000,
     taxableAmount: 950000,
+    invoiceTaxAmount: 0,
     totalTax: 104500,
     grandTotal: 1054500,
-    calculatedItems: [],
   };
 
   const samplePaymentSummary: InvoicePaymentSummary = {
     totalPaid: 500000,
     remainingBalance: 554500,
     isFullyPaid: false,
+    isPartiallyPaid: true,
     isOverdue: false,
-    paymentStatus: 'partially_paid',
-    paymentPercentage: 47.4,
   };
 
   const samplePayments: Payment[] = [
@@ -122,10 +134,8 @@ export function runInvoicePdfUnitTests(): {
       amount: 500000,
       paymentDate: '2026-10-02',
       paymentMethod: 'bank_transfer',
-      reference: 'TRX-998877',
       notes: 'DP 50%',
       createdAt: '2026-10-02T10:00:00Z',
-      updatedAt: '2026-10-02T10:00:00Z',
     },
   ];
 
@@ -197,11 +207,10 @@ export function runInvoicePdfUnitTests(): {
       description: `Item Layanan Operasional ${i + 1}`,
       quantity: 1,
       unitPrice: 100000,
+      subtotal: 100000,
       discount: 0,
       taxRate: 11,
       total: 111000,
-      createdAt: '2026-10-01T00:00:00Z',
-      updatedAt: '2026-10-01T00:00:00Z',
     }));
 
     const pdf = buildInvoicePdf({
