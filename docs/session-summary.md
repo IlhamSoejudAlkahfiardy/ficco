@@ -536,7 +536,53 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 17. Status Saat Ini & Langkah Berikutnya
+---
+
+## 17. Sesi Implementasi Step 15: Implement Dashboard
+
+- **Tujuan Fitur**:
+  - Membangun dasbor eksekutif keuangan komprehensif 100% offline lokal yang diturunkan langsung dari IndexedDB (Dexie) tanpa membutuhkan request server apapun.
+  - Menyajikan metrik pendapatan (*Revenue*), pengeluaran (*Expenses*), laba bersih (*Net Profit*), persentase margin keuntungan (*Profit Margin*), piutang tertunda (*Outstanding Invoices*), dan faktur lewat jatuh tempo (*Overdue Invoices*).
+  - Menyajikan visualisasi tren keuangan historis 6 bulan terakhir (Revenue vs Expenses vs Net Profit) dan distribusi 5 kategori pengeluaran terbesar (*Expense Category Share*).
+  - Menampilkan daftar 5 faktur penjualan terbaru dan 5 pengeluaran terbaru dengan status dan navigasi langsung.
+  - Menyediakan filter rentang waktu: Bulan Ini (`this_month`), Bulan Lalu (`last_month`), Tahun Ini (`this_year`), Semua Waktu (`all`), dan Rentang Tanggal Kustom (`custom`).
+
+- **Detail Implementasi**:
+  1. **Tipe Data & Model (`features/dashboard/_types/`):**
+     - [`dashboard.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_types/dashboard.types.ts):
+       - Definisi kontrak `DashboardMetrics`, `DashboardFilter`, `DashboardDateRangePreset`, `RecentInvoiceItem`, `RecentExpenseItem`, `MonthlyFinancialTrend`, `ExpenseCategoryShare`, dan `DashboardData`.
+  2. **Mesin Kalkulasi Domain Murni (`features/dashboard/_utils/`):**
+     - [`dashboard-calculations.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_utils/dashboard-calculations.ts):
+       - `getDashboardDateBounds()` & `getPreviousPeriodBounds()`: Menghitung rentang tanggal presisi berdasarkan preset waktu atau rentang kustom beserta periode komparasi sebelumnya (MoM).
+       - `calculateDashboardMetrics()`: Menghitung pendapatan aktual dari riwayat pembayaran / faktur lunas, total biaya pengeluaran, laba bersih, rasio margin %, perubahan persentase MoM, sisa piutang tertunda, dan faktur jatuh tempo.
+       - `generateMonthlyTrends()`: Menghasilkan deret metrik 6 bulan historis berurutan untuk visualisasi tren arus kas.
+       - `calculateDashboardCategoryBreakdown()`: Mengagregasi 5 kategori pengeluaran teratas dan menghitung porsi persentase share masing-masing.
+  3. **Rangkaian Pengujian Unit Otomatis (`features/dashboard/_utils/`):**
+     - [`dashboard-calculations.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_utils/dashboard-calculations.test.ts):
+       - 6 suite pengujian unit (8 tes verifikasi): Perhitungan metrik eksekutif, pembatasan rentang tanggal, periode MoM, deret tren 6 bulan, distribusi beban kategori, dan batas aman pembagian nol (zero-division).
+  4. **Domain Service & Hook Reaktif (`features/dashboard/`):**
+     - [`dashboard-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_services/dashboard-service.ts):
+       - `DashboardDomainService`: Mengakses data lokal secara asinkron dari `invoiceRepository`, `paymentRepository`, `expenseRepository`, `customerRepository`, dan `expenseCategoryRepository`, lalu mengagregasikannya.
+     - [`use-dashboard.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_hooks/use-dashboard.ts):
+       - Hook React `'use client'` untuk mengelola filter periode, tanggal kustom, pemuatan data reaktif, serta pembaruan instan (*refresh*).
+  5. **Komponen Visual Dashboard (`features/dashboard/_components/`):**
+     - [`DashboardQuickActions`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-quick-actions.tsx): Toolbar header dengan pemilih preset tanggal `AppSelect`, input tanggal kustom (dari-sampai), tombol refresh, serta tombol pintasan aksi cepat `+ Biaya` dan `+ Faktur Baru`.
+     - [`DashboardMetricsGrid`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-metrics-grid.tsx): 5 kartu KPI eksekutif (Total Pendapatan, Total Beban, Laba Bersih & Margin %, Sisa Tagihan, dan Faktur Jatuh Tempo) lengkap dengan perbandingan MoM dan skeleton loading.
+     - [`DashboardFinancialChart`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-financial-chart.tsx): Grafik batang interaktif Recharts untuk arus kas 6 bulan terakhir (Pendapatan vs Beban vs Laba Bersih) serta bar progres visual 5 kategori pengeluaran terbesar.
+     - [`DashboardRecentInvoices`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-recent-invoices.tsx): Tabel ringkas 5 faktur penjualan terbaru dengan badge status warna, nama pelanggan, sisa tagihan, dan tautan langsung ke detail faktur.
+     - [`DashboardRecentExpenses`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-recent-expenses.tsx): Daftar 5 pengeluaran operasional terbaru dengan badge kategori, metode pembayaran, tanggal, dan nominal.
+     - [`DashboardView`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-view.tsx): Wadah utama yang merangkai seluruh komponen dashboard di atas beserta widget status database offline IndexedDB yang dapat dilipat (*accordion*).
+  6. **Ikon & Integrasi Diagnostik:**
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG `trendingUp`, `clock`, `alertCircle`, dan `arrowUpRight`.
+     - [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan `Dashboard Domain Unit Tests` sebagai langkah diagnostik ke-10.
+     - [`app/(customer)/dashboard/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/dashboard/page.tsx): Diperbarui untuk me-render `DashboardView` dengan metadata SEO lengkap.
+
+- **Status & Hasil**:
+  - Seluruh kriteria penerimaan Step 15 terpenuhi: Perhitungan akurat, 100% offline lokal tanpa request server, filter tanggal responsif, visualisasi grafik Recharts modern, dan data faktur/pengeluaran terintegrasi penuh.
+
+---
+
+## 18. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -553,8 +599,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 11** | Implement invoice list/detail (Search, filter, status badge, detail drawer/page, edit/delete) | Selesai | `476ff4b` |
 | **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | Selesai | Terverifikasi lokal |
 | **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | Selesai | `0d3dea0` |
-| **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | **Selesai** | Terverifikasi lokal |
-| **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | Selesai | `dfa0956` |
+| **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | **Selesai** | Terverifikasi lokal |
+| **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 

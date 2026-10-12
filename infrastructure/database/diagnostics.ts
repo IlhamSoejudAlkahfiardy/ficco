@@ -6,7 +6,7 @@ import { CURRENT_DB_VERSION } from './migrations';
 import { runInvoiceDomainUnitTests } from '@/features/invoices/_utils/invoice-calculations.test';
 import { runInvoicePdfUnitTests } from '@/features/invoices/_utils/invoice-pdf.test';
 import { runExpenseDomainUnitTests } from '@/features/expenses/_utils/expense-calculations.test';
-
+import { runDashboardDomainUnitTests } from '@/features/dashboard/_utils/dashboard-calculations.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -196,6 +196,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Expense Domain Unit Tests',
       passed: expenseTestSummary.failedCount === 0,
       message: `${expenseTestSummary.passedCount}/${expenseTestSummary.total} unit tests passed (Totals, Breakdown, Date Filter, Search, & MoM Stats).`,
+    });
+
+    // 10. Test Dashboard Domain Unit Tests (Step 15)
+    const dashboardTestSummary = runDashboardDomainUnitTests();
+    results.push({
+      step: 'Dashboard Domain Unit Tests',
+      passed: dashboardTestSummary.failedCount === 0,
+      message: `${dashboardTestSummary.passedCount}/${dashboardTestSummary.total} unit tests passed (Revenue, Net Profit, MoM Trends, Outstanding & Expense Breakdown).`,
     });
 
 
