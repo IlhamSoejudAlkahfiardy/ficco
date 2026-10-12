@@ -582,7 +582,60 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 18. Status Saat Ini & Langkah Berikutnya
+---
+
+## 18. Sesi Implementasi Step 16: Implement Reports
+
+- **Tujuan Fitur**:
+  - Membangun modul laporan keuangan komprehensif (*Financial Reports*) 100% lokal berbasis IndexedDB (Dexie) tanpa membutuhkan komunikasi server.
+  - Menyediakan 3 tab laporan utama:
+    1. **Ringkasan Laba Rugi (*Profit & Loss Statement*)**: Menampilkan pendapatan, beban operasional, laba bersih, margin laba %, perbandingan MoM/YoY, grafik batang komparasi bulanan, dan tabel rincian periodik lengkap dengan ringkasan total.
+    2. **Laporan Pendapatan (*Revenue Report*)**: Menampilkan pendapatan terealisasi, total nilai faktur diterbitkan, tingkat pelunasan (*collection rate* %), rata-rata ukuran faktur, grafik tren penerimaan kas, tabel pendapatan per pelanggan (dengan kontribusi %), dan tabel pendapatan per produk/layanan.
+    3. **Laporan Pengeluaran (*Expense Report*)**: Menampilkan total biaya, total transaksi beban, rata-rata pengeluaran, kategori pengeluaran terbesar, grafik tren pengeluaran bulanan, tabel rincian per kategori, dan tabel rincian per metode pembayaran.
+  - Menyediakan filter waktu fleksibel: Bulan Ini (`this_month`), Bulan Lalu (`last_month`), Kuartal Ini (`this_quarter`), Tahun Ini (`this_year`), Semua Periode (`all`), dan Rentang Tanggal Kustom (`custom`).
+  - Fitur ekspor data 100% offline: Unduh berkas CSV instan untuk setiap tab (dilengkapi UTF-8 BOM untuk Microsoft Excel) dan tombol cetak laporan (*Print / Save as PDF*).
+
+- **Detail Implementasi**:
+  1. **Tipe Data & Model (`features/reports/_types/`):**
+     - [`reports.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_types/reports.types.ts):
+       - Definisi kontrak `ReportDatePreset`, `ReportFilter`, `ProfitLossSummary`, `PeriodicFinancialRow`, `CustomerRevenueRow`, `ProductRevenueRow`, `CategoryExpenseRow`, `PaymentMethodExpenseRow`, `RevenueReportData`, `ExpenseReportData`, dan `ReportsData`.
+  2. **Mesin Kalkulasi Domain Murni & Utilitas Ekspor (`features/reports/_utils/`):**
+     - [`reports-calculations.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_utils/reports-calculations.ts):
+       - `getReportDateBounds()`: Resolusi batas tanggal untuk seluruh preset (termasuk kuartal dan tahun).
+       - `getPreviousReportBounds()`: Penentuan otomatis durasi periode pembanding sebelumnya.
+       - `calculateProfitLossSummary()`: Menghitung pendapatan, beban, laba, margin %, dan laju pertumbuhan (*growth %*).
+       - `generatePeriodicFinancialRows()`: Menyusun deret bulanan kronologis pendapatan, beban, laba bersih, margin %, dan frekuensi faktur/beban.
+       - `calculateCustomerRevenue()`: Peringkat kontribusi pendapatan per pelanggan beserta persentase kontribusi.
+       - `calculateProductRevenue()`: Peringkat penjualan per item barang/jasa beserta kuantitas dan nilai.
+       - `calculateCategoryExpenses()`: Agregasi beban per kategori pos pengeluaran.
+       - `calculatePaymentMethodExpenses()`: Agregasi beban menurut metode transaksi (Transfer Bank, Tunai, QRIS, dll).
+     - [`reports-csv-export.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_utils/reports-csv-export.ts):
+       - Utilitas ekspor CSV berbasis Blob offline untuk Laba Rugi, Pendapatan, dan Pengeluaran dengan format ramah spreadsheet.
+  3. **Rangkaian Pengujian Unit Otomatis (`features/reports/_utils/`):**
+     - [`reports-calculations.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_utils/reports-calculations.test.ts):
+       - 5 suite pengujian unit: Batas tanggal preset/kuartal, formula laba rugi & zero-division safety, baris periodik bulanan, peringkat pendapatan pelanggan, dan distribusi kategori pengeluaran.
+  4. **Domain Service & Hook Reaktif (`features/reports/`):**
+     - [`reports-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_services/reports-service.ts):
+       - `ReportsDomainService`: Mengakses repository lokal IndexedDB (`invoiceRepository`, `paymentRepository`, `expenseRepository`, `customerRepository`, `expenseCategoryRepository`, dan tabel `invoiceItems`).
+     - [`use-reports.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_hooks/use-reports.ts):
+       - Hook React `'use client'` untuk mengelola preset rentang tanggal, tanggal kustom, tab aktif, pemuatan asinkron, dan pembaruan reaktif.
+  5. **Komponen Visual Laporan (`features/reports/_components/`):**
+     - [`ReportsFilterBar`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-filter-bar.tsx): Bilah navigasi tab, pemilih preset tanggal `AppSelect`, input tanggal kustom, tombol penyegaran, tombol ekspor CSV, dan tombol cetak laporan.
+     - [`ReportsProfitLossTab`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-profit-loss-tab.tsx): 4 kartu KPI (Pendapatan, Beban, Laba Bersih, Margin %), grafik batang komparasi bulanan Recharts, dan tabel rincian periodik dengan baris total footer.
+     - [`ReportsRevenueTab`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-revenue-tab.tsx): 4 KPI pendapatan (Total Pendapatan, Total Ditagihkan, Tingkat Pelunasan, Rata-rata Faktur), grafik tren penerimaan kas, tabel pendapatan per pelanggan, dan tabel penjualan per produk.
+     - [`ReportsExpenseTab`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-expense-tab.tsx): 4 KPI pengeluaran (Total Beban, Transaksi, Rata-rata, Kategori Terbesar), grafik tren beban bulanan, tabel rincian per kategori, dan tabel metode pembayaran.
+     - [`ReportsView`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-view.tsx): Wadah utama yang mengintegrasikan seluruh filter, tab view, ekspor CSV, dan cetak.
+  6. **Ikon & Integrasi Sistem:**
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG `download` dan `printer`.
+     - [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan `Reports Domain Unit Tests` sebagai langkah diagnostik ke-11.
+     - [`app/(customer)/reports/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/(customer)/reports/page.tsx): Diperbarui untuk me-render `ReportsView` dengan metadata SEO lengkap.
+
+- **Status & Hasil**:
+  - Seluruh kriteria penerimaan Step 16 terpenuhi: Laporan akurat diturunkan dari data lokal IndexedDB, perubahan filter memperbarui visualisasi seketika, grafik dan tabel responsive, serta ekspor CSV offline berfungsi penuh.
+
+---
+
+## 19. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -600,8 +653,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 12** | Implement payments (Record payment, partial/full payment, history, automatic status update) | Selesai | Terverifikasi lokal |
 | **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | Selesai | `0d3dea0` |
 | **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | Selesai | `dfa0956` |
-| **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | **Selesai** | Terverifikasi lokal |
-| **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | Selesai | `f143746` |
+| **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | **Selesai** | Terverifikasi lokal |
+| **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 

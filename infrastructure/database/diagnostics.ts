@@ -7,6 +7,7 @@ import { runInvoiceDomainUnitTests } from '@/features/invoices/_utils/invoice-ca
 import { runInvoicePdfUnitTests } from '@/features/invoices/_utils/invoice-pdf.test';
 import { runExpenseDomainUnitTests } from '@/features/expenses/_utils/expense-calculations.test';
 import { runDashboardDomainUnitTests } from '@/features/dashboard/_utils/dashboard-calculations.test';
+import { runReportsDomainUnitTests } from '@/features/reports/_utils/reports-calculations.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -204,6 +205,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Dashboard Domain Unit Tests',
       passed: dashboardTestSummary.failedCount === 0,
       message: `${dashboardTestSummary.passedCount}/${dashboardTestSummary.total} unit tests passed (Revenue, Net Profit, MoM Trends, Outstanding & Expense Breakdown).`,
+    });
+
+    // 11. Test Reports Domain Unit Tests (Step 16)
+    const reportsTestSummary = runReportsDomainUnitTests();
+    results.push({
+      step: 'Reports Domain Unit Tests',
+      passed: reportsTestSummary.failedCount === 0,
+      message: `${reportsTestSummary.passedCount}/${reportsTestSummary.total} unit tests passed (P&L Summary, Periodic Trends, Customer & Category Distribution).`,
     });
 
 
