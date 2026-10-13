@@ -55,6 +55,19 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
     - **Detail Implementasi**: File-file yang dibuat/diubah dengan clickable link (`[`filename`](file:///path/to/file)`), struktur layer (`_components`, `_hooks`, `_services`, `_schemas`, `_types`, dll.).
     - **Status & Hasil**: Fungsionalitas yang berhasil diimplementasikan.
 
+## Mandatory Manual Testing Scenarios Directive (Panduan Skenario Pengujian Manual)
+- **WAJIB SETELAH PENGERJAAN FITUR / MODIFIKASI FUNGSIONAL**:
+  - Setiap kali selesai mengerjakan **fitur baru atau modifikasi fungsional**, agen **WAJIB** menyertakan **Skenario Pengujian Manual (Manual Testing Scenarios)** berbasis teks di dalam respon.
+  - **Karakteristik & Format Output**:
+    - **Berbasis teks/markdown langsung**: Disajikan dalam format teks/code block checklist yang siap dibaca atau di-copas secara mandiri oleh USER untuk dieksekusi secara manual.
+    - Skenario pengujian ditujukan untuk pengujian manual oleh USER langsung di antarmuka web/browser (bukan dieksekusi otomatis oleh skrip agen).
+  - **Struktur Skenario yang Wajib Disajikan**:
+    1. **Tujuan Pengujian (Testing Objective)**: Fungsionalitas atau alur bisnis yang diuji.
+    2. **Prasyarat & Akses Halaman (Preconditions & Route)**: URL/halaman yang harus diakses (misal `/reports`, `/dashboard`), serta persiapan data awal yang diperlukan (apakah butuh data faktur/pengeluaran dummy).
+    3. **Langkah-langkah Pengujian (Step-by-Step Test Actions)**: Rincian aksi konkret yang harus diklik, dipilih, diisi, atau dieksekusi oleh USER di browser.
+    4. **Hasil yang Diharapkan (Expected Results)**: Indikator visual dan fungsional yang membuktikan fitur berjalan benar (angka metrik terhitung tepat, visual grafik Recharts tampil, respons filter tanggal instan, file CSV terunduh, dialog/modal muncul dengan benar, dsb.).
+    5. **Pengujian Kasus Ekstrem / Edge Cases (Bila Relevan)**: Kondisi saat data kosong (*empty state*), input tidak lengkap, atau periode tanpa transaksi.
+
 ## Mandatory Commit Message Recommendation (Rekomendasi Pesan Commit)
 - **WAJIB SETELAH SETIAP PENGERJAAN**:
   - Setiap kali selesai mengerjakan sesuatu (baik fitur baru, perbaikan bug/error, refactoring, perbaikan tipe/linting, penyesuaian styling, update dokumentasi, dsb.), agen **WAJIB** menyertakan rekomendasi perintah `git add` dan `git commit` di akhir respon.
