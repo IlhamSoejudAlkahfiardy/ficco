@@ -1,0 +1,5 @@
+# 1. Jalankan linting hanya pada file yang di-stage (Cepat & Anti-Bottleneck)
+pnpm exec lint-staged
+
+# 2. Validasi tipe TypeScript seluruh proyek
+pnpm exec tsc --noEmit
