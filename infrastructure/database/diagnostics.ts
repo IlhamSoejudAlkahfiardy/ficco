@@ -9,6 +9,7 @@ import { runExpenseDomainUnitTests } from '@/features/expenses/_utils/expense-ca
 import { runDashboardDomainUnitTests } from '@/features/dashboard/_utils/dashboard-calculations.test';
 import { runReportsDomainUnitTests } from '@/features/reports/_utils/reports-calculations.test';
 import { runBackupDomainUnitTests } from '@/features/backup/_utils/backup-export.test';
+import { runBackupImportUnitTests } from '@/features/backup/_utils/backup-import.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -222,6 +223,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Backup Domain Unit Tests',
       passed: backupTestSummary.failedCount === 0,
       message: `${backupTestSummary.passedCount}/${backupTestSummary.total} unit tests passed (Filename Generation, Versioned Payload, Zod Schema, & Table Summaries).`,
+    });
+
+    // 13. Test Backup Import Domain Unit Tests (Step 18)
+    const backupImportTestSummary = runBackupImportUnitTests();
+    results.push({
+      step: 'Backup Import Domain Unit Tests',
+      passed: backupImportTestSummary.failedCount === 0,
+      message: `${backupImportTestSummary.passedCount}/${backupImportTestSummary.total} unit tests passed (Safe Parsing, Schema Version Guard, Zod Integrity, & Empty Table Handling).`,
     });
 
 

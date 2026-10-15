@@ -55,3 +55,31 @@ export interface BackupExportResult {
   totalRecords: number;
   tableSummaries: BackupTableSummary[];
 }
+
+export interface BackupImportPreview {
+  filename: string;
+  fileSizeBytes: number;
+  format: string;
+  schemaVersion: number;
+  appVersion: string;
+  exportedAt: string;
+  totalRecords: number;
+  tableSummaries: BackupTableSummary[];
+}
+
+export interface BackupValidationResult {
+  valid: boolean;
+  error?: string;
+  details?: string[];
+  payload?: BackupPayload;
+  preview?: BackupImportPreview;
+}
+
+export interface BackupImportResult {
+  success: boolean;
+  restoredAt: string;
+  totalRecords: number;
+  tableSummaries: BackupTableSummary[];
+  error?: string;
+}
+

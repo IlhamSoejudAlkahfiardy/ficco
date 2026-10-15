@@ -696,7 +696,57 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 20. Status Saat Ini & Langkah Berikutnya
+## 20. Pengerjaan Step 18 — Implement JSON import
+
+* **Tujuan Fitur:**
+  Membangun fungsionalitas pemulihan basis data dari berkas cadangan JSON (*JSON Import / Restore*) secara aman, terverifikasi, dan transaksional (*local-first atomic database replacement*) sesuai spesifikasi Step 18 pada [`docs/invoice-expense-prd-blueprint.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Mengizinkan pengguna memilih berkas cadangan `.json` melalui area *file picker* interaktif atau *drag-and-drop*.
+  - Melakukan *safe JSON parsing* dengan proteksi *error boundary* jika berkas bukan JSON valid atau terpotong/rusak.
+  - Memverifikasi kesesuaian format (`format === 'invoice-app-backup'`) dan penjagaan versi skema (`schemaVersion <= BACKUP_SCHEMA_VERSION = 1`) untuk mencegah inkonsistensi ke depan.
+  - Menjalankan validasi skema integritas mendalam menggunakan **Zod Schema** (`backupPayloadSchema`) pada seluruh 9 tabel bisnis (`companies`, `customers`, `products`, `invoices`, `invoiceItems`, `expenses`, `expenseCategories`, `payments`, `settings`).
+  - Menampilkan pratinjau data (*import preview card*) yang mencakup nama berkas, ukuran, waktu ekspor, total baris data, dan rincian per entitas tabel sebelum data diterapkan.
+  - Menyediakan modal konfirmasi eksplisit (*explicit confirmation modal*) dengan peringatan jelas bahwa seluruh data saat ini akan digantikan.
+  - Menjalankan strategi penggantian basis data secara atomik menggunakan transaksi Dexie (`db.transaction('rw', db.tables)`). Jika proses gagal di tengah jalan, transaksi dibatalkan (*rollback*) secara otomatis sehingga database saat ini tetap 100% utuh tanpa kerusakan data.
+
+* **Detail Implementasi:**
+  1. **Tipe Data & Kontrak Import (`features/backup/_types/`):**
+     - [`backup.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_types/backup.types.ts): Menambahkan tipe `BackupImportPreview`, `BackupValidationResult`, dan `BackupImportResult`.
+  2. **Utilitas Penguraian & Validasi (`features/backup/_utils/`):**
+     - [`backup-import.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_utils/backup-import.ts):
+       - `parseAndValidateBackupJson()`: Menguji sintaks JSON, tipe objek, format identifier, batas versi skema, validasi Zod integritas seluruh tabel, serta mengompilasi statistik pratinjau data.
+     - [`backup-import.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_utils/backup-import.test.ts):
+       - Suite pengujian unit otomatis yang mencakup 7 skenario uji: valid JSON parse & preview, tabel kosong valid, penolakan sintaks korup/malformed JSON, penolakan tipe non-objek, penolakan format yang tidak cocok, penolakan skema masa depan (`schemaVersion > 1`), dan penolakan entitas tabel rusak melalui Zod.
+  3. **Layanan Transaksional Basis Data (`features/backup/_services/`):**
+     - [`backup-import-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_services/backup-import-service.ts):
+       - `BackupImportService`: Membaca berkas via `File.text()` / `FileReader`, validasi komprehensif, dan eksekusi penggantian tabel secara atomik melalui transaksi Dexie (`clear()` pada seluruh 9 tabel, diikuti `bulkAdd()` entitas cadangan dan pencatatan `last_import_date`).
+  4. **Custom Hook Reaktif (`features/backup/_hooks/`):**
+     - [`use-backup-import.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_hooks/use-backup-import.ts):
+       - Hook React `'use client'` untuk mengelola alur pemilihan file, status validasi (`isValidating`), status pemulihan (`isImporting`), modal konfirmasi (`isConfirmOpen`), serta hasil akhir import atau pesan error.
+  5. **Komponen Visual & Integrasi Antarmuka:**
+     - [`BackupImportCard`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_components/backup-import-card.tsx):
+       - Dropzone interaktif dengan event drag-and-drop dan input berkas `.json`.
+       - Kartu pratinjau berkas: Nama, ukuran, tanggal dibuat, badge total rekaman, dan rincian tabel.
+       - Modal dialog konfirmasi risiko tinggi berlatar belakang *backdrop blur* dengan tombol pembatalan dan tombol eksekusi pemulihan.
+       - Banner sukses dengan rekomendasi muat ulang (*reload*) halaman.
+     - [`SettingsView`](file:///d:/DOT%20Indonesia/Project/ficco/features/settings/_components/settings-view.tsx):
+       - Merender `BackupImportCard` berdampingan dengan `BackupExportCard` pada tab **Cadangan Data (JSON Backup)**.
+     - [`app/(customer)/backup/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/%28customer%29/backup/page.tsx):
+       - Memperbarui rute navigasi `/backup` agar menampilkan modul lengkap Ekspor dan Impor cadangan secara terintegrasi.
+     - [`shared/_components/icons.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx):
+       - Menambahkan SVG icon `upload`.
+     - [`features/backup/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/index.ts):
+       - Mengekspor seluruh API publik impor cadangan.
+  6. **Integrasi Diagnostik Sistem:**
+     - [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan `Backup Import Domain Unit Tests` sebagai langkah pengujian diagnostik ke-13.
+
+* **Status & Hasil:**
+  - Seluruh kriteria penerimaan Step 18 terpenuhi:
+    1. Berkas tidak valid / korup ditolak secara aman dan tidak pernah merusak database lokal saat ini.
+    2. Berkas cadangan valid memulihkan seluruh 9 tabel data dengan tepat secara *offline-ready*.
+
+---
+
+## 21. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -716,8 +766,10 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | Selesai | `dfa0956` |
 | **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | Selesai | `f143746` |
 | **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | Selesai | `d8d965a` |
-| **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | **Selesai** | Terverifikasi lokal |
-| **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | Selesai | `cb5a4c3` |
+| **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | **Selesai** | Terverifikasi lokal |
+| **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
 
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useCompanySettings } from '../_hooks/use-company-settings';
 import { CompanyProfileForm } from './company-profile-form';
 import { InvoiceDefaultsForm } from './invoice-defaults-form';
-import { BackupExportCard } from '@/features/backup';
+import { BackupExportCard, BackupImportCard } from '@/features/backup';
 
 export const SettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'backup'>('profile');
@@ -141,7 +141,10 @@ export const SettingsView: React.FC = () => {
               isSaving={isSaving}
             />
           ) : (
-            <BackupExportCard />
+            <div className="space-y-8">
+              <BackupExportCard />
+              <BackupImportCard />
+            </div>
           )}
         </div>
       </div>
