@@ -3,6 +3,7 @@
 // Components
 export * from './_components/backup-export-card';
 export * from './_components/backup-import-card';
+export * from './_components/data-management-view';
 
 // Hooks
 export * from './_hooks/use-backup-export';

@@ -82,7 +82,7 @@ export const BackupExportCard: React.FC = () => {
             ) : (
               <>
                 <Icons.download size={16} />
-                <span>Unduh Cadangan Sekarang</span>
+                <span>Export All Data (.json)</span>
               </>
             )}
           </button>
@@ -116,35 +116,47 @@ export const BackupExportCard: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Specifications and Status Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* 4. Specifications and Status Badges (Blueprint Step 19: Last Backup, Backup File Format, Data Size) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800">
           <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
-            Format & Versi Cadangan
+            Last Backup
+          </p>
+          <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1 truncate">
+            {stats?.lastBackupDate ? formatTimestamp(stats.lastBackupDate) : 'Belum pernah'}
+          </p>
+          <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
+            {stats?.lastBackupDate ? 'Tercatat di pengaturan lokal' : 'Disarankan ekspor berkala'}
+          </p>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800">
+          <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+            Backup File Format
           </p>
           <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1">
             {BACKUP_FORMAT} (v{BACKUP_SCHEMA_VERSION})
           </p>
           <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
-            Aplikasi Ficco v{APP_VERSION}
+            JSON portabel v{APP_VERSION}
           </p>
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800">
           <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
-            Cadangan Terakhir
+            Data Size
           </p>
-          <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1">
-            {stats?.lastBackupDate ? formatTimestamp(stats.lastBackupDate) : 'Belum pernah dicadangkan'}
+          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-1">
+            {isLoadingStats ? 'Menghitung...' : formatFileSize(stats?.dataSizeBytes || 0)}
           </p>
           <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
-            Tersimpan di IndexedDB lokal
+            Ukuran estimasi snapshot lokal
           </p>
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800">
           <p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
-            Total Record Database
+            Total Records
           </p>
           <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
             {isLoadingStats ? 'Menghitung...' : `${stats?.totalRecords || 0} Record`}

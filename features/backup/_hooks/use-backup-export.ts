@@ -11,6 +11,7 @@ export interface DatabaseBackupStats {
   totalRecords: number;
   tableSummaries: BackupTableSummary[];
   lastBackupDate: string | null;
+  dataSizeBytes: number;
 }
 
 export function useBackupExport() {
@@ -29,6 +30,7 @@ export function useBackupExport() {
         totalRecords: res.totalRecords,
         tableSummaries: res.tableSummaries,
         lastBackupDate: res.lastBackupDate,
+        dataSizeBytes: res.dataSizeBytes,
       });
     } catch (err) {
       console.error('Failed to load backup stats:', err);
@@ -66,6 +68,7 @@ export function useBackupExport() {
             totalRecords: res.totalRecords,
             tableSummaries: res.tableSummaries,
             lastBackupDate: res.lastBackupDate,
+            dataSizeBytes: res.dataSizeBytes,
           });
           setError(null);
         }

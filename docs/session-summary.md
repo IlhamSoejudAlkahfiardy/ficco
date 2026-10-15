@@ -746,7 +746,51 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 21. Status Saat Ini & Langkah Berikutnya
+---
+
+## 21. Pengerjaan Step 19 — Implement backup UX
+
+* **Tujuan Fitur:**
+  Membangun pengalaman pengguna (*User Experience / UX*) manajemen data dan pencadangan yang intuitif, informatif, dan dapat dipahami secara mandiri tanpa memerlukan dokumentasi teknis (*self-explanatory backup workflow*) sesuai spesifikasi Step 19 pada [`docs/invoice-expense-prd-blueprint.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan navigasi terpadu: **Settings → Data Management** (dan rute langsung `/backup`).
+  - Menampilkan 3 metrik inti secara real-time dan komprehensif:
+    1. **Last Backup**: Waktu dan tanggal tepat pencadangan terakhir yang tersimpan di IndexedDB lokal.
+    2. **Backup File Format**: Format berkas terverifikasi (`JSON • invoice-app-backup v1 • Ficco v1.0.0`).
+    3. **Data Size**: Estimasi ukuran data byte aktual dari snapshot 9 tabel basis data lokal, lengkap dengan jumlah rekaman aktif.
+  - Menyediakan aksi utama yang tegas dan langsung:
+    * **Export All Data**: Tombol aksi primer untuk mengunduh berkas cadangan JSON seketika dengan status indikator.
+    * **Import Data**: Tombol navigasi / dropzone untuk memvalidasi berkas dan memulihkan data dengan proteksi transaksi atomik.
+  - Menyajikan panduan alur kerja visual 3 langkah (*Visual 3-Step Backup Workflow*) dan FAQ interaktif seputar arsitektur *Local-First* dan *Zero-Knowledge* sehingga pengguna awam memahami bahwa data tersimpan 100% di perangkat mereka dan aman saat migrasi perangkat.
+
+* **Detail Implementasi:**
+  1. **Komponen Terpadu Data Management UX (`features/backup/_components/`):**
+     - [`DataManagementView`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_components/data-management-view.tsx):
+       - Header dinamis bergaya gradien modern dengan rekam jejak navigasi `Settings → Data Management`.
+       - Widget ringkasan metrik 3 kartu: *Last Backup*, *Backup File Format*, dan *Data Size* dengan tombol penyegaran instan.
+       - Panduan alur kerja visual: *1. Simpan di Perangkat*, *2. Ekspor Berkala*, *3. Pulihkan Kapan Saja*.
+       - Panel FAQ interaktif (keamanan offline, cara memindahkan data antar-laptop, dan proteksi transaksi atomik).
+       - Pengontrol segmen tab: *Semua Modul*, *Ekspor Data (Export All Data)*, dan *Impor Data (Import Data)*.
+  2. **Penyempurnaan Layanan & Hook Metrik Data Size (`features/backup/`):**
+     - [`backup-export-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_services/backup-export-service.ts): Menambahkan komputasi ukuran byte data aktual (`dataSizeBytes`) pada fungsi `getDatabaseStats()`.
+     - [`use-backup-export.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_hooks/use-backup-export.ts): Memperbarui interface `DatabaseBackupStats` agar menyertakan `dataSizeBytes` secara reaktif.
+     - [`backup-export-card.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_components/backup-export-card.tsx): Menambahkan metrik *Data Size* dan melabeli tombol aksi secara tegas sebagai **Export All Data (.json)**.
+  3. **Integrasi Halaman Pengaturan & Halaman Backup:**
+     - [`SettingsView`](file:///d:/DOT%20Indonesia/Project/ficco/features/settings/_components/settings-view.tsx):
+       - Menyelaraskan tab ketiga menjadi **Data Management** (`Settings → Data Management`), mendukung parameter URL `?tab=data-management`, dan merender `DataManagementView`.
+     - [`app/(customer)/backup/page.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/app/%28customer%29/backup/page.tsx):
+       - Merender langsung `DataManagementView` sebagai pusat kendali data pada rute navigasi `/backup`.
+     - [`features/backup/index.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/index.ts):
+       - Mengekspor `DataManagementView` ke publik API modul cadangan.
+
+* **Status & Hasil:**
+  - Seluruh kriteria penerimaan Step 19 terpenuhi dengan sempurna:
+    1. Alur kerja pencadangan dan pemulihan data sangat jelas dan dapat dipahami tanpa perlu membaca dokumentasi eksternal (*understandable without documentation*).
+    2. Navigasi `Settings → Data Management` tersedia dengan tampilan metrik *Last Backup*, *Backup File Format*, dan *Data Size* yang akurat dan responsif.
+    3. Aksi *Export All Data* dan *Import Data* terintegrasi secara mulus dengan proteksi transaksi atomik Dexie.
+
+---
+
+## 22. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -767,8 +811,10 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | Selesai | `f143746` |
 | **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | Selesai | `d8d965a` |
 | **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | Selesai | `cb5a4c3` |
-| **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | **Selesai** | Terverifikasi lokal |
-| **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | Selesai | `27b0cbe` |
+| **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | **Selesai** | Terverifikasi lokal |
+| **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
 
 

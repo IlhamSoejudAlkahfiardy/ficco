@@ -62,17 +62,21 @@ export class BackupExportService {
     totalRecords: number;
     tableSummaries: ReturnType<typeof calculateBackupTableSummaries>;
     lastBackupDate: string | null;
+    dataSizeBytes: number;
   }> {
     const data = await this.readAllTables();
     const tableSummaries = calculateBackupTableSummaries(data);
     const totalRecords = tableSummaries.reduce((sum, item) => sum + item.count, 0);
     const lastBackupDate = (await settingsRepository.get<string>('last_backup_date')) || null;
+    const jsonString = JSON.stringify(data);
+    const dataSizeBytes = new Blob([jsonString]).size;
 
     return {
       data,
       totalRecords,
       tableSummaries,
       lastBackupDate,
+      dataSizeBytes,
     };
   }
 

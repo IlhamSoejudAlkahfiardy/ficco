@@ -4,10 +4,17 @@ import React, { useState } from 'react';
 import { useCompanySettings } from '../_hooks/use-company-settings';
 import { CompanyProfileForm } from './company-profile-form';
 import { InvoiceDefaultsForm } from './invoice-defaults-form';
-import { BackupExportCard, BackupImportCard } from '@/features/backup';
+import { DataManagementView } from '@/features/backup';
 
 export const SettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'backup'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'data-management'>(() => {
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (tabParam === 'data-management' || tabParam === 'backup') return 'data-management';
+      if (tabParam === 'invoice') return 'invoice';
+    }
+    return 'profile';
+  });
   const {
     isLoading,
     isSaving,
@@ -109,15 +116,15 @@ export const SettingsView: React.FC = () => {
             type="button"
             onClick={() => {
               clearMessage();
-              setActiveTab('backup');
+              setActiveTab('data-management');
             }}
             className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-              activeTab === 'backup'
+              activeTab === 'data-management'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
             }`}
           >
-            Cadangan Data (JSON Backup)
+            Data Management
           </button>
         </div>
 
@@ -141,10 +148,7 @@ export const SettingsView: React.FC = () => {
               isSaving={isSaving}
             />
           ) : (
-            <div className="space-y-8">
-              <BackupExportCard />
-              <BackupImportCard />
-            </div>
+            <DataManagementView />
           )}
         </div>
       </div>
