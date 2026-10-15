@@ -23,6 +23,8 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
     stats,
     isLoadingStats,
     isExporting,
+    lastResult,
+    error,
     exportData,
     refreshStats,
   } = useBackupExport();
@@ -124,6 +126,33 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Success Banner if exported from header */}
+      {lastResult && (
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              ✓
+            </span>
+            <div>
+              <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+                Berkas cadangan berhasil diunduh ke perangkat Anda!
+              </p>
+              <p className="text-emerald-700 dark:text-emerald-300 mt-0.5">
+                Nama Berkas: <code className="font-mono bg-emerald-100 dark:bg-emerald-900/60 px-1 py-0.5 rounded">{lastResult.filename}</code> • Ukuran: {formatFileSize(lastResult.sizeBytes)} • {lastResult.totalRecords} record tersimpan.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Banner if any */}
+      {error && (
+        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2 animate-in fade-in">
+          <Icons.alertCircle size={18} className="text-rose-600 dark:text-rose-400 shrink-0" />
+          <p>{error}</p>
+        </div>
+      )}
 
       {/* 2. Key Metrics Bar (Blueprint Step 19: Last Backup, Backup File Format, Data Size) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

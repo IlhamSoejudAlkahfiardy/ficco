@@ -68,6 +68,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
     4. **Hasil yang Diharapkan (Expected Results)**: Indikator visual dan fungsional yang membuktikan fitur berjalan benar (angka metrik terhitung tepat, visual grafik Recharts tampil, respons filter tanggal instan, file CSV terunduh, dialog/modal muncul dengan benar, dsb.).
     5. **Pengujian Kasus Ekstrem / Edge Cases (Bila Relevan)**: Kondisi saat data kosong (*empty state*), input tidak lengkap, atau periode tanpa transaksi.
 
+## Mandatory Playwright E2E Automated Testing Directive (Kewajiban Pengujian Otomatis E2E)
+- **WAJIB SETELAH PENGERJAAN FITUR / STEP DARI BLUEPRINT**:
+  - Setiap kali selesai mengerjakan **fitur baru / kelanjutan implementasi step** (bukan bug fixing kecil, hotfix minor, atau penyesuaian styling sepele), agen **WAJIB**:
+    1. **Membuat atau Memperbarui Test Suite E2E**: Buat/perbarui file spec Playwright di direktori `e2e/<feature>.spec.ts` yang mencakup skenario happy path, interaksi tombol/form, dan verifikasi elemen UI utama.
+    2. **Mengeksekusi Tes E2E Secara Nyata**: Jalankan tes tersebut di terminal menggunakan Playwright (`pnpm exec playwright test e2e/<feature>.spec.ts` atau `pnpm test:e2e`).
+    3. **Menyajikan Bukti Kelulusan (*Proof of Pass*) di Respon**: Sertakan log/output resmi dari Playwright runner (jumlah skenario lulus, durasi eksekusi) di dalam respon untuk membuktikan bahwa fitur 100% berfungsi tanpa error runtime.
+  - **Batasan & Kriteria Pemicu**:
+    - **Wajib Dijalankan**: Pengerjaan Step dari PRD blueprint, pembuatan modul/fitur baru, penambahan alur bisnis baru.
+    - **Tidak Perlu Dijalankan**: Perbaikan bug/error kecil, linting/type fix, update dokumentasi murni.
+
 ## Mandatory Commit Message Recommendation (Rekomendasi Pesan Commit)
 - **WAJIB SETELAH SETIAP PENGERJAAN**:
   - Setiap kali selesai mengerjakan sesuatu (baik fitur baru, perbaikan bug/error, refactoring, perbaikan tipe/linting, penyesuaian styling, update dokumentasi, dsb.), agen **WAJIB** menyertakan rekomendasi perintah `git add` dan `git commit` di akhir respon.
