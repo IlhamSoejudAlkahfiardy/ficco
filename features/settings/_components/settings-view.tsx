@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { useCompanySettings } from '../_hooks/use-company-settings';
 import { CompanyProfileForm } from './company-profile-form';
 import { InvoiceDefaultsForm } from './invoice-defaults-form';
+import { BackupExportCard } from '@/features/backup';
 
 export const SettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'invoice'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'backup'>('profile');
   const {
     isLoading,
     isSaving,
@@ -104,6 +105,20 @@ export const SettingsView: React.FC = () => {
           >
             Default Faktur & Penomoran
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearMessage();
+              setActiveTab('backup');
+            }}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'backup'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            Cadangan Data (JSON Backup)
+          </button>
         </div>
 
         {/* Content Body */}
@@ -119,12 +134,14 @@ export const SettingsView: React.FC = () => {
               onSubmit={saveCompany}
               isSaving={isSaving}
             />
-          ) : (
+          ) : activeTab === 'invoice' ? (
             <InvoiceDefaultsForm
               initialData={invoiceDefaults}
               onSubmit={saveDefaults}
               isSaving={isSaving}
             />
+          ) : (
+            <BackupExportCard />
           )}
         </div>
       </div>

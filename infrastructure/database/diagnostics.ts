@@ -8,6 +8,7 @@ import { runInvoicePdfUnitTests } from '@/features/invoices/_utils/invoice-pdf.t
 import { runExpenseDomainUnitTests } from '@/features/expenses/_utils/expense-calculations.test';
 import { runDashboardDomainUnitTests } from '@/features/dashboard/_utils/dashboard-calculations.test';
 import { runReportsDomainUnitTests } from '@/features/reports/_utils/reports-calculations.test';
+import { runBackupDomainUnitTests } from '@/features/backup/_utils/backup-export.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -213,6 +214,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Reports Domain Unit Tests',
       passed: reportsTestSummary.failedCount === 0,
       message: `${reportsTestSummary.passedCount}/${reportsTestSummary.total} unit tests passed (P&L Summary, Periodic Trends, Customer & Category Distribution).`,
+    });
+
+    // 12. Test Backup Domain Unit Tests (Step 17)
+    const backupTestSummary = runBackupDomainUnitTests();
+    results.push({
+      step: 'Backup Domain Unit Tests',
+      passed: backupTestSummary.failedCount === 0,
+      message: `${backupTestSummary.passedCount}/${backupTestSummary.total} unit tests passed (Filename Generation, Versioned Payload, Zod Schema, & Table Summaries).`,
     });
 
 

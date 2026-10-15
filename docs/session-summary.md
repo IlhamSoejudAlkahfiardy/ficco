@@ -635,7 +635,68 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 19. Status Saat Ini & Langkah Berikutnya
+---
+
+## 19. Sesi Implementasi Step 17: Implement JSON Export
+
+- **Tujuan Fitur**:
+  - Membangun mesin pencadangan (*Backup Engine*) dan ekspor data JSON 100% offline berbasis IndexedDB (Dexie) tanpa membutuhkan komunikasi server (Zero-Knowledge Architecture).
+  - Membaca seluruh 9 tabel bisnis dari IndexedDB: `companies`, `customers`, `products`, `invoices`, `invoiceItems`, `expenses`, `expenseCategories`, `payments`, dan `settings`.
+  - Membungkus seluruh data ke dalam skema cadangan terversi (*versioned backup schema*) sesuai spesifikasi Bagian 13.2 dari blueprint:
+    - `format`: `"invoice-app-backup"`
+    - `schemaVersion`: `1`
+    - `appVersion`: `"1.0.0"`
+    - `exportedAt`: Timestamp ISO 8601
+    - `data`: Objek berisi seluruh entitas data dari 9 tabel
+    - `metadata`: Rangkuman total records, per-table counts, dan generator identifier.
+  - Melakukan validasi ketat menggunakan **Zod Schema** untuk menjamin data yang diekspor 100% valid dan memenuhi kontrak data publik.
+  - Menghasilkan nama berkas otomatis yang terstandarisasi: `invoice-app-backup-YYYY-MM-DD.json`.
+  - Memicu pengunduhan berkas langsung di browser pengguna (*client-side blob download*).
+  - Menyimpan jejak waktu cadangan terakhir (`last_backup_date`) ke dalam pengaturan lokal database.
+
+- **Detail Implementasi**:
+  1. **Tipe Data & Model (`features/backup/_types/`):**
+     - [`backup.types.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_types/backup.types.ts):
+       - Konstanta: `BACKUP_FORMAT`, `BACKUP_SCHEMA_VERSION`, `APP_VERSION`.
+       - Definisi kontrak: `BackupData`, `BackupPayload`, `BackupMetadata`, `BackupTableSummary`, dan `BackupExportResult`.
+  2. **Skema Validasi Zod (`features/backup/_schemas/`):**
+     - [`backup.schemas.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_schemas/backup.schemas.ts):
+       - Skema validasi Zod untuk seluruh entitas database (`companySchema`, `customerSchema`, `productSchema`, `invoiceSchema`, `invoiceItemSchema`, `expenseSchema`, `expenseCategorySchema`, `paymentSchema`, `appSettingSchema`).
+       - `backupPayloadSchema`: Memvalidasi payload cadangan utuh secara ketat sebelum proses serialisasi dan ekspor.
+  3. **Mesin Ekspor Murni & Unit Test (`features/backup/_utils/`):**
+     - [`backup-export.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_utils/backup-export.ts):
+       - `generateBackupFilename()`: Generator nama berkas sesuai pola `invoice-app-backup-YYYY-MM-DD.json`.
+       - `constructBackupPayload()`: Menyusun payload terversi lengkap dengan metadata statistik.
+       - `serializeBackupPayload()`: Serialisasi JSON berformat rapi (*pretty-printed*).
+       - `calculateBackupTableSummaries()`: Pemetaan label bahasa Indonesia dan jumlah record per tabel.
+       - `triggerJsonDownload()`: Memicu pengunduhan file JSON berbasis Blob secara offline di browser.
+     - [`backup-export.test.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_utils/backup-export.test.ts):
+       - 4 suite pengujian unit: Penamaan file, pembungkusan & serialisasi payload, validasi Zod ketat (serta penolakan format korup), dan akurasi ringkasan 9 tabel.
+  4. **Domain Service & Hook Reaktif (`features/backup/`):**
+     - [`backup-export-service.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_services/backup-export-service.ts):
+       - `BackupExportService`: Membaca seluruh tabel Dexie, menyusun payload terversi, memvalidasi dengan Zod, mencatat timestamp cadangan terakhir ke `settingsRepository`, dan memicu unduhan.
+     - [`use-backup-export.ts`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_hooks/use-backup-export.ts):
+       - Hook React `'use client'` untuk mengelola status ekspor (`isExporting`), pemuatan statistik real-time, penanganan error, dan hasil ekspor terakhir.
+  5. **Komponen Visual & Integrasi Antarmuka:**
+     - [`BackupExportCard`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_components/backup-export-card.tsx):
+       - Kartu antarmuka modern yang menampilkan:
+         * Status format cadangan & versi schema.
+         * Timestamp cadangan terakhir.
+         * Rincian jumlah data aktif pada ke-9 tabel bisnis IndexedDB.
+         * Tombol aksi "Unduh Cadangan Lengkap (.json)" dengan indikator loading.
+         * Banner notifikasi sukses lengkap dengan nama file, ukuran byte, dan total record.
+         * Jaminan privasi dan keamanan offline lokal (Zero-Knowledge Architecture).
+     - [`SettingsView`](file:///d:/DOT%20Indonesia/Project/ficco/features/settings/_components/settings-view.tsx):
+       - Menambahkan tab navigasi ketiga: **Cadangan Data (JSON Backup)** yang langsung merender `BackupExportCard`.
+  6. **Integrasi Diagnostik Sistem:**
+     - [`infrastructure/database/diagnostics.ts`](file:///d:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan `Backup Domain Unit Tests` sebagai langkah diagnostik ke-12.
+
+- **Status & Hasil**:
+  - Seluruh kriteria penerimaan Step 17 terpenuhi: Satu file JSON memuat seluruh data dari 9 tabel bisnis, ekspor bekerja 100% offline di sisi client tanpa request server, serta JSON yang dihasilkan valid dan terverifikasi Zod.
+
+---
+
+## 20. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -654,8 +715,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 13** | Implement invoice PDF (PDF preview modal, offline vector generator, download & print) | Selesai | `0d3dea0` |
 | **Step 14** | Implement expense management (Categories, Expense CRUD, date, amount, payment method) | Selesai | `dfa0956` |
 | **Step 15** | Implement dashboard (Revenue, Expenses, Profit, Outstanding & Overdue Invoices, Filters) | Selesai | `f143746` |
-| **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | **Selesai** | Terverifikasi lokal |
-| **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | Selesai | `d8d965a` |
+| **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | **Selesai** | Terverifikasi lokal |
+| **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 
