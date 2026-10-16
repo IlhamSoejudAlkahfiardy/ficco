@@ -1,21 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { Icons } from '../icons';
 import { MAIN_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../../_constants/navigation';
 import { useShellStore } from '../../_hooks/use-shell-store';
 import { useTheme } from '../../_hooks/use-theme';
+import { PwaInstallButton } from '../pwa';
+
+const emptySubscribe = () => () => {};
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
   const { toggleMobileNav, isOnline, isCheckingConnectivity, checkConnectivity } =
     useShellStore();
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
-    setMounted(true);
     // Auto-check connectivity against server endpoint upon client mount
     checkConnectivity();
   }, [checkConnectivity]);
@@ -50,8 +56,10 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: Offline/Online Status Indicator (Clickable to Re-probe) */}
-      <div className="flex items-center gap-3">
+      {/* Right: Offline/Online Status Indicator, PWA Actions, & Theme */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <PwaInstallButton variant="compact" />
+        <PwaInstallButton variant="badge" />
         <button
           type="button"
           onClick={() => checkConnectivity()}

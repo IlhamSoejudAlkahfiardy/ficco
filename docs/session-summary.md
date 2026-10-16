@@ -790,7 +790,58 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 22. Status Saat Ini & Langkah Berikutnya
+## 22. Pengerjaan Step 20 — Implement PWA/offline support
+
+* **Tujuan Fitur:**
+  Membangun dukungan Progressive Web App (PWA) dan kapabilitas offline shell penuh (*Offline Application Shell*) sesuai spesifikasi Step 20, Section 4.10, dan Section 25 pada [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan berkas Web App Manifest standar dan kompatibel lintas-peramban (`manifest.json` dan `app/manifest.ts`).
+  - Menyediakan ikon aplikasi beresolusi tinggi dengan branding Ficco (`192x192`, `512x512`, maskable icons, `apple-touch-icon`, dan SVG).
+  - Mengimplementasikan Service Worker mandiri di `public/sw.js` dengan strategi caching canggih (*Network-First with Cache Fallback* untuk navigasi HTML, *Stale-While-Revalidate / Cache-First* untuk static assets Next.js, dan bypass aman untuk `/api/`).
+  - Menyediakan antarmuka cadangan offline (*Offline Fallback Page*) di [`app/offline/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/offline/page.tsx) dengan panduan arsitektur *Local-First* bahwa data bisnis tetap aman tersimpan di IndexedDB.
+  - Membangun layer infrastruktur PWA di `infrastructure/pwa/` dengan Zustand store untuk status konektivitas, deteksi mode display standalone, dan *Install Experience* (`beforeinstallprompt`).
+  - Menyediakan komponen UI PWA (`PwaRegistrar`, `PwaInstallButton`, `PwaSettingsView`) di Header, Shell, dan Tab Pengaturan (`Settings → Aplikasi & PWA`).
+
+* **Detail Implementasi:**
+  1. **Aset Manifest & Ikon PWA (`public/` & `app/`):**
+     - [`public/manifest.json`](file:///D:/DOT%20Indonesia/Project/ficco/public/manifest.json) & [`app/manifest.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/manifest.ts): Konfigurasi Web App Manifest dengan nama lengkap, nama ringkas, start URL `/dashboard`, display mode `standalone`, tema `#2563eb`, warna latar `#ffffff`, orientasi `any`, shortcuts (Faktur Baru, Pengeluaran, Laporan), dan daftar ikon lengkap.
+     - [`public/icons/icon.svg`](file:///D:/DOT%20Indonesia/Project/ficco/public/icons/icon.svg) & [`public/icons/icon-maskable.svg`](file:///D:/DOT%20Indonesia/Project/ficco/public/icons/icon-maskable.svg): Desain vektor SVG monogram dokumen finansial Ficco bergradien biru elegan.
+     - Berkas PNG raster resolusi tinggi: `icon-192x192.png`, `icon-512x512.png`, `icon-maskable-192x192.png`, `icon-maskable-512x512.png`, `apple-touch-icon.png` (180x180), dan `icon-96x96.png`.
+  2. **Service Worker Shell & Caching (`public/sw.js`):**
+     - [`public/sw.js`](file:///D:/DOT%20Indonesia/Project/ficco/public/sw.js):
+       * `install`: Pre-caching aset penting (`/offline`, `/manifest.json`, ikon-ikon) secara resilien dengan `self.skipWaiting()`.
+       * `activate`: Pembersihan versi cache usang dan klaim kendali peramban instan melalui `self.clients.claim()`.
+       * `fetch`: Strategi navigasi *Network-First* yang menyimpan halaman HTML yang berhasil dikunjungi ke `PAGES_CACHE` dan otomatis mengembalikan cache atau fallback `/offline` saat internet terputus. Aset statis menggunakan *Stale-While-Revalidate* dengan penanganan `ignoreSearch: true`. Endpoint `/api/` dilindungi sebagai network-only untuk menjaga keakuratan probe koneksi.
+  3. **Halaman Cadangan Offline (`app/offline/`):**
+     - [`app/offline/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/offline/page.tsx): Halaman responsif modern dengan status badge *Koneksi Internet Terputus*, edukasi bahwa Ficco adalah aplikasi *Local-First* tanpa risiko kehilangan data, tombol navigasi langsung *Buka Dashboard Lokal* dan *Muat Ulang Halaman*.
+  4. **Layer Infrastruktur PWA (`infrastructure/pwa/`):**
+     - [`infrastructure/pwa/types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/pwa/types.ts): Definisi interface `BeforeInstallPromptEvent` dan `PwaState`.
+     - [`infrastructure/pwa/pwa-store.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/pwa/pwa-store.ts): Global Zustand store untuk melacak status `isSupported`, `isStandalone`, `isInstalled`, `canInstall`, `isSwRegistered`, `hasUpdate`, dan fungsi `triggerInstall()`.
+     - [`infrastructure/pwa/service-worker-manager.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/pwa/service-worker-manager.ts): Registrasi Service Worker pada konteks aman (HTTPS/localhost), pendengar pembaruan versi baru (*update found*), dan utilitas `cacheCurrentPageAssets()`.
+     - [`infrastructure/pwa/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/pwa/index.ts) & [`infrastructure/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/index.ts): Ekspor modul PWA ke public API layer infrastruktur.
+  5. **Komponen Pengalaman PWA & Integrasi Shell (`shared/_components/pwa/` & `features/settings/`):**
+     - [`PwaRegistrar`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/pwa/pwa-registrar.tsx): Komponen client yang otomatis mendaftarkan Service Worker dan menampilkan floating banner notifikasi pembaruan sistem (*Update Available*) dengan tombol *Perbarui*.
+     - [`PwaInstallButton`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/pwa/pwa-install-button.tsx): Tombol instalasi PWA responsif yang mendukung varian `compact`, `button`, dan status badge `PWA Standalone`.
+     - [`shared/_components/shell/header.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/shell/header.tsx): Menyematkan `PwaInstallButton` tepat di samping indikator status Online/Offline.
+     - [`app/layout.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/layout.tsx): Menambahkan deklarasi `viewport` (theme-color `#2563eb`), metadata PWA lengkap (`manifest`, `appleWebApp`, `icons`), dan me-mount `<PwaRegistrar />`.
+     - [`PwaSettingsView`](file:///D:/DOT%20Indonesia/Project/ficco/features/settings/_components/pwa-settings-view.tsx): Panel kendali PWA pada tab baru di halaman Pengaturan (`Settings → Aplikasi & PWA`) yang memuat:
+       * Kartu status real-time (Mode Tampilan, Service Worker, Penyimpanan Bisnis IndexedDB, Status Pemasangan).
+       * Panduan instalasi multi-perangkat (Desktop Chrome/Edge/Brave, iPhone/iPad Safari, dan Android Chrome).
+       * Fitur pemeliharaan mandiri: Uji Halaman Offline, Bersihkan Cache Aplikasi, dan Muat Ulang Halaman.
+     - [`SettingsView`](file:///D:/DOT%20Indonesia/Project/ficco/features/settings/_components/settings-view.tsx): Menambahkan tab ke-4 **Aplikasi & PWA** terintegrasi.
+  6. **Automated E2E Testing Suite (`e2e/pwa-offline.spec.ts`):**
+     - [`e2e/pwa-offline.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/pwa-offline.spec.ts): Menguji validitas manifest JSON & WebManifest, ketersediaan ikon, rute `/sw.js`, halaman `/offline`, panel tab Pengaturan PWA, dan pengujian simulasi offline Chromium sesuai 6 Kriteria Penerimaan resmi Step 20.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 20 terpenuhi:
+    1. Buka aplikasi saat online → Berhasil dimuat dan dicache secara otomatis.
+    2. Muat aplikasi → Seluruh komponen dan shell beroperasi normal.
+    3. Putus koneksi internet → Indikator header otomatis mendeteksi *Offline Mode*.
+    4. Segarkan halaman (Refresh) saat offline → Aplikasi tetap terbuka dan shell navigasi berfungsi.
+    5. Data lokal yang ada tetap tersedia → Seluruh data bisnis di IndexedDB (Dexie) tetap utuh dan dapat diakses.
+
+---
+
+## 23. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -812,8 +863,10 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 16** | Implement reports (Revenue report, Expense report, Profit summary, Charts, Tables) | Selesai | `d8d965a` |
 | **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | Selesai | `cb5a4c3` |
 | **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | Selesai | `27b0cbe` |
-| **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | **Selesai** | Terverifikasi lokal |
-| **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | Selesai | Terverifikasi lokal |
+| **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | **Selesai** | Terverifikasi lokal |
+| **Step 21** | Implement license database (Supabase project/table, MVP schema) | **Langkah Selanjutnya** | Menunggu instruksi |
+
 
 
 

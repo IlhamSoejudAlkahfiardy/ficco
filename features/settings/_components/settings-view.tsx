@@ -5,11 +5,13 @@ import { useCompanySettings } from '../_hooks/use-company-settings';
 import { CompanyProfileForm } from './company-profile-form';
 import { InvoiceDefaultsForm } from './invoice-defaults-form';
 import { DataManagementView } from '@/features/backup';
+import { PwaSettingsView } from './pwa-settings-view';
 
 export const SettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'data-management'>(() => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'invoice' | 'data-management' | 'pwa'>(() => {
     if (typeof window !== 'undefined') {
       const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (tabParam === 'pwa' || tabParam === 'offline') return 'pwa';
       if (tabParam === 'data-management' || tabParam === 'backup') return 'data-management';
       if (tabParam === 'invoice') return 'invoice';
     }
@@ -126,6 +128,20 @@ export const SettingsView: React.FC = () => {
           >
             Data Management
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearMessage();
+              setActiveTab('pwa');
+            }}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'pwa'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            Aplikasi & PWA
+          </button>
         </div>
 
         {/* Content Body */}
@@ -147,8 +163,10 @@ export const SettingsView: React.FC = () => {
               onSubmit={saveDefaults}
               isSaving={isSaving}
             />
-          ) : (
+          ) : activeTab === 'data-management' ? (
             <DataManagementView />
+          ) : (
+            <PwaSettingsView />
           )}
         </div>
       </div>
