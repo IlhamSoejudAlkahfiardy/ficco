@@ -841,7 +841,121 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 23. Status Saat Ini & Langkah Berikutnya
+---
+
+## 23. Pengerjaan Step 21 — Implement license database
+
+* **Tujuan Fitur:**
+  Membangun skema basis data lisensi di Supabase (*License Database & Security Boundary*) sesuai spesifikasi Step 21 dan Bagian 14 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan berkas migrasi SQL Supabase DDL untuk membuat tabel `public.licenses` dengan kolom MVP resmi: `id` (UUID), `license_key` (TEXT UNIQUE), `used` (BOOLEAN DEFAULT FALSE), `created_at` (TIMESTAMPTZ), `customer_name` (TEXT), `customer_email` (TEXT), `activated_at` (TIMESTAMPTZ NULL), dan `device_fingerprint` (TEXT NULL).
+  - Mengonfigurasi strategi Row Level Security (RLS) yang ketat: menolak akses anonim publik (`anon` role denied) dan hanya mengizinkan modifikasi penuh oleh `service_role` melalui Next.js server route handlers.
+  - Membangun layer infrastruktur Supabase server-side (`infrastructure/supabase/`) dengan isolasi mutlak dari peramban/client (`SUPABASE_SERVICE_ROLE_KEY` tidak boleh diawali dengan `NEXT_PUBLIC_` dan ditolak jika dipanggil di browser).
+  - Menyediakan *Graceful In-Memory Mock Fallback* pada server client untuk kelancaran development dan automated testing saat pengguna belum mengonfigurasi kredensial live Supabase di lingkungan lokal.
+  - Membangun modul domain lisensi (`features/license/`) dengan tipe TypeScript, skema validasi Zod, cryptographically secure license key generator (`FCC-XXXX-XXXX-XXXX-XXXX`), dan repository server-side.
+  - Menyediakan endpoint health check diagnostik `GET /api/license/health` untuk memverifikasi kesiapan tabel dan status RLS, serta `POST /api/license/health` untuk pengujian pembuatan lisensi baru.
+  - Menegakkan prinsip arsitektur *Local-First Zero-Knowledge*: data transaksi keuangan/bisnis (faktur, pengeluaran, pelanggan, laporan) sama sekali tidak pernah dikirim ke Supabase; Supabase secara eksklusif hanya mengelola kunci lisensi dan status aktivasi perangkat.
+
+* **Detail Implementasi:**
+  1. **Migrasi SQL Supabase (`supabase/migrations/`):**
+     - [`20261016_create_licenses_table.sql`](file:///D:/DOT%20Indonesia/Project/ficco/supabase/migrations/20261016_create_licenses_table.sql):
+       * DDL pembuatan tabel `public.licenses` dengan seluruh kolom MVP.
+       * Indeks performa & integritas: `idx_licenses_license_key_unique` dan `idx_licenses_used`.
+       * Kebijakan RLS: `ALTER TABLE public.licenses ENABLE ROW LEVEL SECURITY`, `Deny public anon access`, dan `Service role full access`.
+  2. **Infrastruktur Supabase Server-Side (`infrastructure/supabase/`):**
+     - [`types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/supabase/types.ts): Definisi tipe baris basis data `LicenseRow`, `LicenseInsert`, dan `LicenseUpdate`.
+     - [`client.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/supabase/client.ts): Client server-only dengan proteksi `typeof window !== 'undefined'`, pembacaan aman `process.env.SUPABASE_URL` & `process.env.SUPABASE_SERVICE_ROLE_KEY`, serta postgREST in-memory query builder mock fallback yang resilien.
+     - [`index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/supabase/index.ts) & [`infrastructure/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/index.ts): Ekspor modul Supabase.
+  3. **Lapisan Domain Lisensi (`features/license/`):**
+     - [`license.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_types/license.types.ts): Model domain `LicenseRecord`, `CreateLicenseDTO`, `ActivateLicenseDTO`, dan `LicenseHealthStatus`.
+     - [`license.schemas.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_schemas/license.schemas.ts): Skema validasi Zod untuk format kunci lisensi (`FCC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}`), pembuatan lisensi, dan aktivasi perangkat.
+     - [`license-generator.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/license-generator.ts): Generator kunci lisensi berbasis `crypto.getRandomValues()` yang tahan benturan (*collision-resistant*) tanpa karakter ambigu.
+     - [`supabase-license-repository.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/supabase-license-repository.ts): Server repository yang mengelola pengecekan duplikasi kunci, pencarian berdasarkan ID/kunci, pembuatan lisensi baru, dan diagnostik health check.
+     - [`index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/index.ts): Ekspor API publik domain lisensi.
+  4. **Server API Route Handler (`app/api/license/health/`):**
+     - [`route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/license/health/route.ts):
+       * `GET`: Menjalankan verifikasi kesiapan skema dan status RLS secara server-side tanpa mengekspos kredensial rahasia ke klien.
+       * `POST`: Menerima pembuatan entitas lisensi baru untuk keperluan testing & integrasi.
+  5. **Konfigurasi Lingkungan (`.env` & `.env.example`):**
+     - [`.env.example`](file:///D:/DOT%20Indonesia/Project/ficco/.env.example) & [`.env`](file:///D:/DOT%20Indonesia/Project/ficco/.env): Dokumentasi variabel lingkungan server Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, dan `SUPABASE_SERVICE_ROLE_KEY`.
+  6. **Automated E2E Testing Suite (`e2e/license-database.spec.ts`):**
+     - [`license-database.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/license-database.spec.ts):
+       * Uji 1: Memverifikasi DDL SQL migration mendefinisikan tabel `licenses`, seluruh kolom MVP, indeks unik, dan policy RLS.
+       * Uji 2: Memverifikasi batas keamanan kredensial rahasia (`SUPABASE_SERVICE_ROLE_KEY`) tidak pernah bocor ke lingkungan browser/klien (`window` / client `process.env`).
+       * Uji 3: Memverifikasi respons valid dari endpoint kesehatan basis data lisensi (`GET /api/license/health`).
+       * Uji 4: Memverifikasi pembuatan lisensi baru dengan generator kriptografis, status `used: false`, dan penegakan keunikan lisensi.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 21 terpenuhi:
+    1. Tabel basis data lisensi terdefinisi dengan kolom MVP (`id`, `license_key`, `used`, `created_at`, `customer_name`, `customer_email`, `activated_at`, `device_fingerprint`).
+    2. Kebijakan Row Level Security (RLS) terdefinisi secara tegas untuk melindungi data dari akses anonim publik.
+    3. Kredensial service role tetap terlindungi secara eksklusif di server Next.js dan tidak pernah bocor ke klien.
+    4. Seluruh 4 skenario uji E2E di `e2e/license-database.spec.ts` dan total 13 skenario Playwright lulus 100%.
+
+---
+
+---
+
+## 24. Pengerjaan Step 22 — Implement admin authentication
+
+* **Tujuan Fitur:**
+  Membangun sistem autentikasi administrator (*Admin Authentication & Protected Admin Route Gate*) sesuai spesifikasi Step 22 dan Bagian 20 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan halaman login admin terproteksi di rute *obscure* [`/sk-11312301239/login`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/login/page.tsx).
+  - Membangun mekanisme sesi terverifikasi secara aman menggunakan token HMAC-SHA256 bertanda tangan kriptografis Web Crypto API (`crypto.subtle`) tanpa dependensi pihak ketiga, yang kompatibel penuh di Edge Runtime maupun Node.js.
+  - Menyimpan sesi pada *HTTP-Only secure cookie* (`ficco_admin_session`) yang kebal terhadap serangan XSS dan tidak pernah bocor ke JavaScript sisi peramban.
+  - Memproteksi seluruh rute admin [`/sk-11312301239`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/page.tsx) dan alias [`/sk-11312301239/admin`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/admin/page.tsx) menggunakan Next.js Middleware/Proxy:
+    * Pengguna anonim/belum terautentikasi otomatis dialihkan (*unauthorized redirect*) ke `/sk-11312301239/login?from=...`.
+    * Pengguna yang sudah login yang mengunjungi halaman login otomatis dialihkan kembali ke Dashboard Admin.
+  - Menyediakan endpoint API server yang terisolasi: `POST /api/admin/login`, `POST /api/admin/logout`, dan `GET /api/admin/me`.
+  - Menyediakan komponen visual UI Admin: `AdminLoginForm` (validasi Zod, visibilitas sandi, tombol demo dev mode), `AdminHeader` (indikator status sesi, badge user, tombol logout), `AdminShell`, dan `AdminOverview` (preview metrik lisensi Step 23 & guardrail Zero-Knowledge).
+  - Menjaga kepatuhan aturan keamanan absolut: `ADMIN_PASSWORD` dan `ADMIN_SESSION_SECRET` tidak pernah di-*hardcode* di sisi klien, melainkan dikonfigurasi melalui variabel lingkungan server (`.env`).
+
+* **Detail Implementasi:**
+  1. **Konfigurasi Lingkungan Server (`.env` & `.env.example`):**
+     - [`.env.example`](file:///D:/DOT%20Indonesia/Project/ficco/.env.example) & [`.env`](file:///D:/DOT%20Indonesia/Project/ficco/.env): Menambahkan variabel kredensial server `ADMIN_USERNAME`, `ADMIN_PASSWORD`, dan `ADMIN_SESSION_SECRET`.
+  2. **Lapisan Tipe & Validasi Schema (`features/admin/`):**
+     - [`admin.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_types/admin.types.ts): Definisi kontrak model `AdminUser`, `AdminSessionPayload`, `AdminLoginDTO`, `AdminAuthResponse`, dan `AdminMeResponse`.
+     - [`admin.schemas.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_schemas/admin.schemas.ts): Skema validasi Zod `adminLoginSchema` untuk sanitasi username dan password.
+  3. **Layanan Otentikasi Kriptografis (`features/admin/_services/`):**
+     - [`admin-auth-service.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_services/admin-auth-service.ts):
+       * `createAdminSessionToken()`: Menghasilkan token sesi bertanda tangan HMAC-SHA256 dengan payload `username`, `role`, `iat`, dan `exp`.
+       * `verifyAdminSessionToken()`: Memvalidasi integritas tanda tangan kriptografis dan masa kedaluwarsa token.
+       * `validateAdminCredentials()`: Memverifikasi kesesuaian kredensial terhadap variabel lingkungan server.
+       * Utilitas `bytesToBase64Url()` dan `base64UrlToBytes()` yang aman untuk URL tanpa ketergantungan library eksternal.
+     - [`admin-auth-service.test.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_services/admin-auth-service.test.ts):
+       * Suite pengujian unit mandiri `runAdminAuthUnitTests()` yang menguji validasi kredensial, verifikasi tanda tangan, penolakan payload korup/palsu, penolakan token kedaluwarsa, dan simetri Base64URL.
+  4. **Server API Route Handlers (`app/api/admin/`):**
+     - [`app/api/admin/login/route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/login/route.ts): Endpoint validasi kredensial, penerbitan token, dan penetapan cookie HTTP-Only.
+     - [`app/api/admin/logout/route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/logout/route.ts): Endpoint pencabutan cookie sesi seketika.
+     - [`app/api/admin/me/route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/me/route.ts): Endpoint verifikasi sesi aktif sisi server.
+  5. **Next.js Route Protection Middleware (`middleware.ts`):**
+     - [`middleware.ts`](file:///D:/DOT%20Indonesia/Project/ficco/middleware.ts): Mencegat setiap akses ke rute `/sk-11312301239/:path*` di tingkat Edge, memvalidasi cookie sesi, serta melakukan *unauthorized redirect* secara instan.
+  6. **Komponen Visual UI & Hook Reaktif (`features/admin/`):**
+     - [`use-admin-auth.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_hooks/use-admin-auth.ts): Hook React `'use client'` untuk mengelola state autentikasi, status loading, pesan error, serta aksi login/logout.
+     - [`admin-login-form.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-login-form.tsx): Form login modern dengan ikon Lucide, toggle visibilitas password, penanganan validasi, dan tombol pengisian cepat mode development.
+     - [`admin-header.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-header.tsx): Header navigasi admin dengan badge status super admin dan tombol logout.
+     - [`admin-shell.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-shell.tsx): Shell layout admin terpadu dengan footer status Zero-Knowledge.
+     - [`admin-overview.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-overview.tsx): Dasbor ikhtisar admin dengan preview metrik lisensi Step 23 dan edukasi arsitektur lokal.
+     - [`features/admin/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/index.ts): Titik ekspor publik modul admin.
+  7. **Halaman App Router (`app/(admin)/`):**
+     - [`app/(admin)/sk-11312301239/login/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/login/page.tsx): Halaman login admin dengan metadata `robots: noindex`.
+     - [`app/(admin)/sk-11312301239/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/page.tsx): Halaman dashboard admin terproteksi.
+     - [`app/(admin)/sk-11312301239/admin/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/sk-11312301239/admin/page.tsx): Alias redirect ke dashboard admin.
+  8. **Ikon & Integrasi Sistem:**
+     - [`shared/_components/icons.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG `shield`, `lock`, `logout`, `key`, `eyeOff`, `loader`, dan `checkCircle`.
+     - [`infrastructure/database/diagnostics.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/database/diagnostics.ts): Mendaftarkan `Admin Auth Domain Unit Tests` sebagai langkah diagnostik ke-14.
+  9. **Automated E2E Testing Suite (`e2e/admin-auth.spec.ts`):**
+     - [`e2e/admin-auth.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/admin-auth.spec.ts): Menguji seluruh kriteria penerimaan resmi Step 22 (proteksi rute tanpa login, penolakan kredensial salah, keberhasilan login & sesi, logout & proteksi ulang, proteksi kerahasiaan environment di browser, dan pengujian API endpoints).
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 22 terpenuhi:
+    1. Pengguna tanpa autentikasi tidak dapat mengakses halaman admin (otomatis dialihkan ke login).
+    2. Admin dapat melakukan login dan logout dengan lancar.
+    3. Kredensial tidak pernah di-*hardcode* di kode klien dan terlindungi penuh di server.
+    4. Seluruh 6 skenario Playwright di `e2e/admin-auth.spec.ts` dan total 19 skenario E2E Playwright lulus 100%.
+
+---
+
+## 25. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -864,8 +978,10 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 17** | Implement JSON export (Full database backup, versioned schema, offline download) | Selesai | `cb5a4c3` |
 | **Step 18** | Implement JSON import (File picker, Zod validation, preview, transactional restore) | Selesai | `27b0cbe` |
 | **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | Selesai | Terverifikasi lokal |
-| **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | **Selesai** | Terverifikasi lokal |
-| **Step 21** | Implement license database (Supabase project/table, MVP schema) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | Selesai | Terverifikasi lokal |
+| **Step 21** | Implement license database (Supabase project/table, MVP schema) | Selesai | Terverifikasi lokal |
+| **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | **Selesai** | Terverifikasi lokal |
+| **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 

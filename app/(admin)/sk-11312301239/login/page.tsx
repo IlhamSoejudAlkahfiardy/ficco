@@ -1,15 +1,29 @@
-import React from 'react';
+import React, { Suspense } from 'react';
+import { Metadata } from 'next';
+import { AdminLoginForm } from '@/features/admin';
+import { Icons } from '@/shared/_components/icons';
+
+export const metadata: Metadata = {
+  title: 'Login Admin — Ficco Admin Portal',
+  description: 'Area masuk terproteksi administrator lisensi Ficco',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function AdminLoginPage() {
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="max-w-md w-full p-8 rounded-2xl bg-slate-800 border border-slate-700 shadow-xl text-center space-y-4">
-        <h1 className="text-xl font-bold text-white">Ficco Admin Portal</h1>
-        <p className="text-xs text-slate-400">Protected administrative area</p>
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/50 text-xs text-slate-400">
-          Admin authentication will be integrated in Step 20.
-        </div>
-      </div>
+    <div className="flex-1 flex items-center justify-center p-4 sm:p-6 my-auto">
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center p-12 text-slate-400">
+            <Icons.loader size={28} className="animate-spin text-blue-400" />
+          </div>
+        }
+      >
+        <AdminLoginForm />
+      </Suspense>
     </div>
   );
 }

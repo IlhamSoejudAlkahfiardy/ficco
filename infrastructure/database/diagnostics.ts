@@ -10,6 +10,7 @@ import { runDashboardDomainUnitTests } from '@/features/dashboard/_utils/dashboa
 import { runReportsDomainUnitTests } from '@/features/reports/_utils/reports-calculations.test';
 import { runBackupDomainUnitTests } from '@/features/backup/_utils/backup-export.test';
 import { runBackupImportUnitTests } from '@/features/backup/_utils/backup-import.test';
+import { runAdminAuthUnitTests } from '@/features/admin/_services/admin-auth-service.test';
 
 export interface DiagnosticResult {
   step: string;
@@ -231,6 +232,14 @@ export async function runDatabaseDiagnostics(): Promise<DiagnosticReport> {
       step: 'Backup Import Domain Unit Tests',
       passed: backupImportTestSummary.failedCount === 0,
       message: `${backupImportTestSummary.passedCount}/${backupImportTestSummary.total} unit tests passed (Safe Parsing, Schema Version Guard, Zod Integrity, & Empty Table Handling).`,
+    });
+
+    // 14. Test Admin Authentication Unit Tests (Step 22)
+    const adminAuthTestSummary = await runAdminAuthUnitTests();
+    results.push({
+      step: 'Admin Auth Domain Unit Tests',
+      passed: adminAuthTestSummary.failedCount === 0,
+      message: `${adminAuthTestSummary.passedCount}/${adminAuthTestSummary.total} unit tests passed (HMAC-SHA256 Token Signing, Payload Verification, Credential Checks, & Expiration).`,
     });
 
 
