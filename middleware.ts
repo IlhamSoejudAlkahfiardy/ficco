@@ -33,5 +33,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/sk-11312301239/:path*'],
+  matcher: ['/admin-dashboard/:path*'],
 };

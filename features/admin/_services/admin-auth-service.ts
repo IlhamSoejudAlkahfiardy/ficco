@@ -11,7 +11,7 @@ import { AdminSessionPayload } from '../_types/admin.types';
 
 export const ADMIN_COOKIE_NAME = 'ficco_admin_session';
 export const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours in seconds
-export const ADMIN_OBSCURE_PATH = '/sk-11312301239';
+export const ADMIN_OBSCURE_PATH = '/admin-dashboard';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

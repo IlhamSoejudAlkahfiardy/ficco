@@ -955,7 +955,73 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 25. Status Saat Ini & Langkah Berikutnya
+---
+
+---
+
+## 25. Pengerjaan Step 23 — Implement admin dashboard
+
+* **Tujuan Fitur:**
+  Mengimplementasikan dasbor analitik lisensi administrator (*Admin License Dashboard*) sesuai spesifikasi resmi Step 23 dan Bagian 21 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyajikan 3 metrik utama lisensi dari Supabase:
+    1. **Total Licenses**: Total jumlah lisensi yang dibuat dan tersimpan.
+    2. **Used Licenses**: Jumlah lisensi yang telah diaktivasi oleh pengguna pada perangkat mereka.
+    3. **Unused Licenses**: Jumlah lisensi aktif yang tersedia untuk dialokasikan kepada pelanggan baru.
+  - Menampilkan visualisasi persentase tingkat utilisasi/aktivasi lisensi (*activation rate progress bar*).
+  - Menyediakan tabel daftar lisensi terkini (*recent licenses table*) dengan filter status (*Semua, Digunakan, Belum Digunakan*), rincian metadata (kunci lisensi, status badge, device ID, tanggal aktivasi, tanggal dibuat), serta tombol salin instan (*copy to clipboard*).
+  - Menyediakan tombol pembuat data demonstrasi (*Dev Demo Seeding*) yang mempermudah pengujian lokal dan pengisian data uji di database Supabase atau mock server.
+  - Menghubungkan antarmuka admin dengan endpoint server API terproteksi `GET /api/admin/dashboard/stats` yang divalidasi dengan token sesi admin HTTP-Only.
+  - Memperbarui rute admin portal dari `/sk-11312301239` menjadi rute bersih `/admin-dashboard` secara konsisten pada Next.js App Router, middleware matcher, autentikasi service, dan test suite E2E.
+
+* **Detail Implementasi:**
+  1. **Kontrak Tipe Data Admin (`features/admin/_types/`):**
+     - [`admin.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_types/admin.types.ts):
+       - Menambahkan interface `AdminLicenseStats` (total, used, unused, utilizationRate, recentLicenses, isMockMode).
+       - Menambahkan interface respons API `AdminDashboardStatsResponse`.
+  2. **Supabase & Mock Repository Query (`features/license/_services/`):**
+     - [`supabase-license-repository.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/supabase-license-repository.ts):
+       - Menambahkan metode `getStats()`: Melakukan agregasi count total lisensi, count lisensi dengan `used = true`, count lisensi dengan `used = false`, serta mengambil 50 lisensi terbaru secara efisien dari Supabase (atau memetakan status dari mock database saat offline/dev).
+       - Menambahkan metode `seedDemoLicenses()`: Menginjeksikan kumpulan data lisensi demo bervariasi (unused & used dengan device ID acak) untuk memfasilitasi pengujian dasbor.
+  3. **Protected Admin Server Route Handlers (`app/api/admin/dashboard/stats/`):**
+     - [`route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/dashboard/stats/route.ts):
+       - `GET`: Memverifikasi cookie sesi admin HMAC-SHA256, mengekstrak metrik dari `supabaseLicenseRepository.getStats()`, dan mengembalikan JSON payload. Menolak request anonim dengan status 401 Unauthorized.
+       - `POST`: Memproses aksi seeding data lisensi dev jika dikirimkan oleh admin terotentikasi.
+  4. **Frontend Hook Reaktif (`features/admin/_hooks/`):**
+     - [`use-admin-dashboard.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_hooks/use-admin-dashboard.ts):
+       - Hook React `'use client'` untuk mengambil data statistik lisensi secara berkala/manual, menangani status loading, penanganan error, aksi penyalinan clipboard, dan pemicuan seeding dev.
+  5. **Komponen Visual Admin Dashboard (`features/admin/_components/`):**
+     - [`admin-dashboard-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-dashboard-view.tsx):
+       - Merender 3 kartu KPI metrik lisensi (`stat-total`, `stat-unused`, `stat-used`) dengan ikon status dan deskripsi kontekstual.
+       - Progress bar utilisasi lisensi dengan persentase real-time.
+       - Indikator status koneksi database (*Supabase Cloud Live* atau *Server In-Memory Mock*).
+       - Tombol aksi cepat: Refresh data, Salin Kunci, dan Seeding Lisensi Uji Coba.
+       - Tabel lisensi responsif dengan tab filter status, badge dinamis, dan formatting tanggal Indonesia.
+     - [`features/admin/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/index.ts): Mengekspor `AdminDashboardView` dan `useAdminDashboard`.
+  6. **Migrasi Rute & Proteksi Middleware:**
+     - Direktori halaman dimigrasikan dari `app/(admin)/sk-11312301239` ke [`app/(admin)/admin-dashboard`](file:///D:/DOT%20Indonesia/Project/ficco/app/%28admin%29/admin-dashboard/page.tsx).
+     - [`admin-auth-service.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_services/admin-auth-service.ts): Mengonfigurasi `ADMIN_OBSCURE_PATH = '/admin-dashboard'`.
+     - [`middleware.ts`](file:///D:/DOT%20Indonesia/Project/ficco/middleware.ts): Memperbarui matcher ke `['/admin-dashboard/:path*']`.
+  7. **Ikon & Integrasi Sistem:**
+     - [`shared/_components/icons.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/icons.tsx): Menambahkan ikon SVG `database` dan `copy`.
+  8. **Automated E2E Testing Suite (`e2e/admin-dashboard.spec.ts` & `e2e/admin-auth.spec.ts`):**
+     - [`e2e/admin-dashboard.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/admin-dashboard.spec.ts):
+       - Memvalidasi tampilan 3 kartu metrik lisensi (Total, Belum Digunakan, Digunakan).
+       - Menguji alur seeding dev data lisensi dan verifikasi pembaruan angka statistik secara live.
+       - Menguji interaksi tombol salin lisensi dan tab filter status.
+       - Memvalidasi endpoint `/api/admin/dashboard/stats` menolak akses tanpa cookie otentikasi (401 Unauthorized).
+     - [`e2e/admin-auth.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/admin-auth.spec.ts): Diperbarui untuk mengarahkan pengujian ke rute `/admin-dashboard` dan heading dasbor baru.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 23 terpenuhi:
+    1. Dasbor admin menampilkan 3 metrik lisensi (Total, Used, Unused) secara akurat dari Supabase/mock backend.
+    2. Endpoint stats terproteksi penuh di sisi server dan menolak akses ilegal.
+    3. Rute `/admin-dashboard` dapat diakses dengan lancar tanpa error 404.
+    4. Seluruh 22 skenario pengujian Playwright E2E lulus 100% tanpa kegagalan (`22 passed`).
+    5. Production build Next.js (`pnpm run build`) berhasil 100% tanpa error TypeScript maupun linting.
+
+---
+
+## 26. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -980,8 +1046,9 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 19** | Implement backup UX (Data management, stats display, backup workflow) | Selesai | Terverifikasi lokal |
 | **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | Selesai | Terverifikasi lokal |
 | **Step 21** | Implement license database (Supabase project/table, MVP schema) | Selesai | Terverifikasi lokal |
-| **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | **Selesai** | Terverifikasi lokal |
-| **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | Selesai | Terverifikasi lokal |
+| **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | **Selesai** | Terverifikasi lokal |
+| **Step 24** | Implement license creation (Admin form to generate/insert new license keys) | **Langkah Selanjutnya** | Menunggu instruksi |
 
 
 

@@ -219,4 +219,62 @@ export class SupabaseLicenseRepository {
       };
     }
   }
+
+  /**
+   * Retrieves aggregated license statistics for the admin dashboard
+   * Source of Truth: docs/invoice-expense-prd-blueprint.md (Section 21 & Step 23)
+   */
+  static async getStats(): Promise<{
+    total: number;
+    used: number;
+    unused: number;
+    activationRate: number;
+    isLiveSupabase: boolean;
+    recentLicenses: License[];
+    timestamp: string;
+  }> {
+    const isLive = isSupabaseConfigured();
+    const licenses = await this.getAll();
+    const total = licenses.length;
+    const used = licenses.filter((l) => l.used).length;
+    const unused = total - used;
+    const activationRate = total > 0 ? Math.round((used / total) * 100) : 0;
+
+    return {
+      total,
+      used,
+      unused,
+      activationRate,
+      isLiveSupabase: isLive,
+      recentLicenses: licenses.slice(0, 5),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Seeds demo licenses (for development testing of admin dashboard calculations)
+   */
+  static async seedDemoLicenses(): Promise<License[]> {
+    const demos: CreateLicenseDTO[] = [
+      { customerName: 'PT Maju Bersama', customerEmail: 'admin@majubersama.com' },
+      { customerName: 'CV Sentosa Abadi', customerEmail: 'finance@sentosa.id' },
+      { customerName: 'Toko Berkah Usaha', customerEmail: 'berkah@gmail.com' },
+      { customerName: 'Digital Kreatif Solo', customerEmail: 'halo@digitalkreatif.id' },
+      { customerName: 'Studio Desain Modern', customerEmail: 'contact@desainmodern.com' },
+    ];
+
+    const createdList: License[] = [];
+    for (let i = 0; i < demos.length; i++) {
+      const created = await this.create(demos[i]);
+      if (i < 3) {
+        await this.activate(created.licenseKey, `FP-DEVICE-TEST-${i + 1}`);
+        created.used = true;
+        created.activatedAt = new Date().toISOString();
+        created.deviceFingerprint = `FP-DEVICE-TEST-${i + 1}`;
+      }
+      createdList.push(created);
+    }
+    return createdList;
+  }
 }
+

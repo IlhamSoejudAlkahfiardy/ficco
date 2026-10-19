@@ -31,3 +31,19 @@ export interface AdminMeResponse {
   authenticated: boolean;
   user?: AdminUser;
 }
+
+export interface AdminLicenseStats {
+  total: number;
+  used: number;
+  unused: number;
+  activationRate: number;
+  isLiveSupabase: boolean;
+  recentLicenses: import('@/features/license').License[];
+  timestamp: string;
+}
+
+export interface AdminDashboardStatsResponse {
+  success: boolean;
+  stats?: AdminLicenseStats;
+  error?: string;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { AdminShell, AdminOverview } from '@/features/admin';
+import { AdminShell, AdminDashboardView } from '@/features/admin';
 
 export const metadata: Metadata = {
   title: 'Dashboard Admin — Ficco Admin Portal',
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function AdminDashboardPage() {
   return (
     <AdminShell>
-      <AdminOverview />
+      <AdminDashboardView />
     </AdminShell>
   );
 }

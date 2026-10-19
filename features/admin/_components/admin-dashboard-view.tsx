@@ -1,0 +1,377 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Icons, DatabaseIcon, CopyIcon } from '@/shared/_components/icons';
+import { useAdminAuth } from '../_hooks/use-admin-auth';
+import { useAdminDashboard } from '../_hooks/use-admin-dashboard';
+
+export function AdminDashboardView() {
+  const { user, logout } = useAdminAuth();
+  const { stats, isLoading, isRefreshing, error, refresh, seedDemoData } = useAdminDashboard();
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopyKey = (key: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(key).catch(() => {});
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+
+  return (
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* Welcome Banner */}
+      <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 border border-slate-700/80 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Sesi Admin Aktif
+              </span>
+
+              {stats && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                  stats.isLiveSupabase
+                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                    : 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
+                }`}>
+                  {stats.isLiveSupabase ? 'Supabase Cloud Live' : 'Server Development Mock'}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Dasbor Manajemen Lisensi Ficco
+            </h1>
+            <p className="text-sm text-slate-300 max-w-2xl">
+              Pusat kendali lisensi komersial dan aktivasi perangkat. Masuk sebagai{' '}
+              <span className="font-semibold text-blue-400 font-mono">
+                {user?.username || 'admin'}
+              </span>
+              .
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => refresh()}
+              disabled={isLoading || isRefreshing}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+              title="Perbarui data statistik dari Supabase"
+            >
+              <Icons.loader size={14} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+              <span>{isRefreshing ? 'Memuat...' : 'Segarkan Data'}</span>
+            </button>
+
+            <Link
+              href="/dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              <span>Aplikasi Pengguna</span>
+              <Icons.arrowUpRight size={14} />
+            </Link>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 bg-red-950/30 hover:bg-red-950/60 border border-red-800/40 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Icons.logout size={14} />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div role="alert" className="p-4 rounded-xl bg-red-950/60 border border-red-800/60 text-red-200 text-xs flex items-center gap-3">
+          <Icons.alertCircle size={18} className="text-red-400 shrink-0" />
+          <div className="flex-1">
+            <span className="font-semibold block">Gagal memuat statistik lisensi:</span>
+            {error}
+          </div>
+          <button
+            type="button"
+            onClick={() => refresh()}
+            className="px-3 py-1 rounded-lg bg-red-900/60 hover:bg-red-900 text-white font-medium cursor-pointer"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
+
+      {/* Blueprint Step 23: The 3 Key Display Metrics (Total, Available/Unused, Used) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <Icons.key size={16} className="text-blue-400" />
+            <span>Metrik Lisensi Komersial (Supabase Database)</span>
+          </h2>
+          {stats && (
+            <span className="text-[11px] text-slate-400 font-mono">
+              Terakhir sinkron: {new Date(stats.timestamp).toLocaleTimeString('id-ID')}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* 1. Total Licenses */}
+          <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3 relative overflow-hidden group hover:border-slate-600 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Total Licenses
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                <Icons.key size={16} />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span
+                data-testid="stat-total"
+                className="text-3xl font-extrabold text-white font-mono tracking-tight"
+              >
+                {isLoading ? '...' : (stats?.total ?? 0)}
+              </span>
+              <span className="text-xs text-slate-400">kunci terdaftar</span>
+            </div>
+
+            <div className="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Basis data Supabase</span>
+              <span className="text-blue-400 font-medium">100% Tercatat</span>
+            </div>
+          </div>
+
+          {/* 2. Unused / Available Licenses */}
+          <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3 relative overflow-hidden group hover:border-emerald-600/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                Unused Licenses (Available)
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <Icons.checkCircle size={16} />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span
+                data-testid="stat-unused"
+                className="text-3xl font-extrabold text-emerald-400 font-mono tracking-tight"
+              >
+                {isLoading ? '...' : (stats?.unused ?? 0)}
+              </span>
+              <span className="text-xs text-slate-400">siap dijual</span>
+            </div>
+
+            <div className="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Status: Belum Terpakai</span>
+              <span className="text-emerald-400 font-medium">Siap Dikirim</span>
+            </div>
+          </div>
+
+          {/* 3. Used Licenses */}
+          <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md space-y-3 relative overflow-hidden group hover:border-amber-600/40 transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                Used Licenses
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                <Icons.shield size={16} />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span
+                data-testid="stat-used"
+                className="text-3xl font-extrabold text-amber-400 font-mono tracking-tight"
+              >
+                {isLoading ? '...' : (stats?.used ?? 0)}
+              </span>
+              <span className="text-xs text-slate-400">telah aktif</span>
+            </div>
+
+            <div className="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Aktivasi Perangkat</span>
+              <span className="text-amber-400 font-medium">
+                {stats?.activationRate ?? 0}% Rasio
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Activation Rate Progress Bar */}
+        {stats && stats.total > 0 && (
+          <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300 font-medium">Tingkat Utilisasi Lisensi (Activation Rate)</span>
+              <span className="font-mono font-semibold text-white">
+                {stats.used} dari {stats.total} lisensi aktif ({stats.activationRate}%)
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-700 overflow-hidden flex">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-amber-500 transition-all duration-500"
+                style={{ width: `${stats.activationRate}%` }}
+              />
+              <div
+                className="h-full bg-emerald-500/80 transition-all duration-500"
+                style={{ width: `${100 - stats.activationRate}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Terpakai: {stats.used}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Tersedia: {stats.unused}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Developer Seeder Button in Dev Mode */}
+      {process.env.NEXT_PUBLIC_DEVELOPMENT === 'TRUE' && (
+        <div className="p-4 rounded-xl bg-slate-800/50 border border-dashed border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+              <Icons.key size={14} />
+              <span>Development Seed Helper (Step 23 Testing)</span>
+            </span>
+            <p className="text-[11px] text-slate-400">
+              Buat 5 lisensi demo otomatis (3 digunakan + 2 tersedia) untuk menguji kalkulasi metrik secara instan.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={seedDemoData}
+            disabled={isRefreshing}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            <DatabaseIcon size={14} />
+            <span>Seed 5 Lisensi Demo</span>
+          </button>
+        </div>
+      )}
+
+      {/* Recent Licenses Table */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <Icons.clock size={16} className="text-blue-400" />
+            <span>Aktivitas Lisensi Terbaru</span>
+          </h3>
+          <span className="text-xs text-slate-400">5 Lisensi Terakhir</span>
+        </div>
+
+        <div className="rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
+              <Icons.loader size={16} className="animate-spin text-blue-400" />
+              <span>Memuat data lisensi dari database...</span>
+            </div>
+          ) : !stats || stats.recentLicenses.length === 0 ? (
+            <div className="p-8 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-700/60 text-slate-400 mx-auto flex items-center justify-center">
+                <Icons.key size={20} />
+              </div>
+              <p className="text-sm font-semibold text-slate-300">Belum ada lisensi di database</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Lisensi yang dibuat melalui panel admin atau seeder akan muncul di sini secara otomatis.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-700/80 bg-slate-900/60 text-slate-400 uppercase text-[11px] font-semibold">
+                    <th className="py-3 px-4">Kunci Lisensi</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Pelanggan</th>
+                    <th className="py-3 px-4">Tanggal Dibuat</th>
+                    <th className="py-3 px-4">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50 text-slate-200">
+                  {stats.recentLicenses.map((lic) => (
+                    <tr key={lic.id} className="hover:bg-slate-750/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-400">
+                        {lic.licenseKey}
+                      </td>
+                      <td className="py-3 px-4">
+                        {lic.used ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            Digunakan
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Tersedia
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div>
+                          <span className="font-medium text-white block">
+                            {lic.customerName || '—'}
+                          </span>
+                          <span className="text-[11px] text-slate-400 block">
+                            {lic.customerEmail || '—'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        {new Date(lic.createdAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyKey(lic.licenseKey)}
+                          className="px-2.5 py-1 rounded text-[11px] font-medium bg-slate-750 hover:bg-slate-700 text-slate-200 border border-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <CopyIcon size={12} />
+                          <span>{copiedKey === lic.licenseKey ? 'Tersalin!' : 'Salin'}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Blueprint Architecture Guardrail Note */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-blue-950/30 border border-blue-800/40 text-blue-200 flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
+        <div className="p-2.5 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 shrink-0">
+          <Icons.shield size={20} />
+        </div>
+        <div className="space-y-0.5 text-xs">
+          <span className="font-semibold text-white block">
+            Kepatuhan Arsitektur Local-First & Zero-Knowledge
+          </span>
+          <p className="text-slate-300 leading-relaxed">
+            Statistik di atas berasal secara eksklusif dari tabel <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono">public.licenses</code> Supabase. Seluruh data transaksi bisnis penyewa (faktur, pengeluaran, daftar pelanggan, laporan) disimpan secara lokal di IndexedDB masing-masing perangkat dan tidak pernah ditransmisikan ke server.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

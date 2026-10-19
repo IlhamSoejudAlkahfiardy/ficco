@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Step 22: Admin Authentication & Protected Route Gate', () => {
-  const obscureAdminPath = '/sk-11312301239';
-  const obscureLoginPath = '/sk-11312301239/login';
+  const obscureAdminPath = '/admin-dashboard';
+  const obscureLoginPath = '/admin-dashboard/login';
 
   test('should redirect unauthenticated users from protected admin routes to login page', async ({ page }) => {
     // 1. Attempt to navigate directly to obscure admin dashboard
@@ -51,7 +51,7 @@ test.describe('Step 22: Admin Authentication & Protected Route Gate', () => {
 
     // Should redirect to admin dashboard
     await expect(page).toHaveURL(new RegExp(`${obscureAdminPath}$`));
-    await expect(page.getByRole('heading', { name: 'Panel Kendali Lisensi Ficco' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Dasbor Manajemen Lisensi Ficco|Panel Kendali Lisensi Ficco/i })).toBeVisible();
 
     // Verify admin header badges and navigation
     await expect(page.getByText('Super Admin')).toBeVisible();

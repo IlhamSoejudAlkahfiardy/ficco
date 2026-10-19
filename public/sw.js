@@ -1,7 +1,7 @@
 // Ficco PWA Service Worker — Offline Shell & Asset Caching
 // Version: 1.0.1
 
-const CACHE_VERSION = 'v1.0.1';
+const CACHE_VERSION = 'v1.0.2';
 const STATIC_CACHE = `ficco-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `ficco-pages-${CACHE_VERSION}`;
 
@@ -146,6 +146,12 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.woff2') ||
     url.pathname.endsWith('.ico');
+
+  // In local development on localhost/127.0.0.1, bypass caching of Next.js chunks to avoid stale HMR bundles
+  const isLocalDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (isLocalDev && url.pathname.startsWith('/_next/')) {
+    return;
+  }
 
   if (isStaticAsset) {
     event.respondWith(
