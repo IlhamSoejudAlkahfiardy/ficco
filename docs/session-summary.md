@@ -1021,7 +1021,61 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 26. Status Saat Ini & Langkah Berikutnya
+## 26. Pengerjaan Step 24 — Implement add license
+
+* **Tujuan Fitur:**
+  Mengimplementasikan pembuatan lisensi komersial baru (*Add License / License Creation*) sesuai spesifikasi resmi Step 24 dan Bagian 17 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menghasilkan kunci lisensi acak yang kuat secara kriptografis (*cryptographically strong random license string*) berformat standar `FCC-XXXX-XXXX-XXXX-XXXX`.
+  - Menyimpan record lisensi baru ke tabel Supabase `licenses` dengan status awal wajib `used = false`.
+  - Menampilkan kunci lisensi baru yang telah dibuat secara jelas pada layar dengan tombol salin kunci (*copy button*) yang responsif.
+  - Menjamin keunikan setiap kunci lisensi yang dibuat (*license uniqueness guarantee*).
+  - Menyediakan endpoint API server terproteksi `POST /api/admin/licenses` dan `GET /api/admin/licenses` yang divalidasi dengan token sesi admin HTTP-Only.
+  - Menghubungkan pembuatan lisensi dengan pembaruan otomatis pada metrik statistik dasbor dan tabel riwayat aktivitas terbaru.
+
+* **Detail Implementasi:**
+  1. **Kontrak Tipe Data Admin & Lisensi (`features/admin/_types/` & `features/license/_types/`):**
+     - [`admin.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_types/admin.types.ts):
+       - Menambahkan interface `CreateLicenseResponse` (success, license, error, message).
+  2. **Generator Kriptografis & Supabase Repository (`features/license/_services/`):**
+     - [`license-generator.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/license-generator.ts):
+       - `generateLicenseKey()`: Menghasilkan 8-byte hexadecimal random number (`crypto.randomBytes(8)`) yang dipecah menjadi 4 segmen karakter (`FCC-XXXX-XXXX-XXXX-XXXX`).
+       - `normalizeLicenseKey()` & `isValidLicenseKeyFormat()`: Menormalisasi dan memvalidasi format string kunci.
+     - [`supabase-license-repository.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/supabase-license-repository.ts):
+       - `create()`: Menyimpan lisensi baru dengan `used: false`, mencatat metadata opsional pelanggan (`customerName`, `customerEmail`), serta menangani penolakan duplikasi kunci unik.
+  3. **Protected Admin Server Route Handlers (`app/api/admin/licenses/`):**
+     - [`route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/licenses/route.ts):
+       - `GET`: Mengambil seluruh daftar lisensi dari Supabase (dengan filter status `used` opsional) khusus untuk admin terautentikasi.
+       - `POST`: Memverifikasi cookie sesi admin (`ficco_admin_session`), memvalidasi payload request dengan `createLicenseSchema`, memanggil `SupabaseLicenseRepository.create()`, dan mengembalikan HTTP 201 Created dengan payload lisensi baru. Menolak akses anonim dengan 401 dan payload cacat dengan 400.
+  4. **Frontend Hook Reaktif (`features/admin/_hooks/`):**
+     - [`use-create-license.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_hooks/use-create-license.ts):
+       - Hook React `'use client'` untuk mengeksekusi request `POST /api/admin/licenses`, mengelola state `isCreating`, `createdLicense`, `error`, dan callback sukses.
+  5. **Komponen Visual UI (`features/admin/_components/`):**
+     - [`create-license-modal.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/create-license-modal.tsx):
+       - Modal dialog modern terintegrasi dengan validasi formulir Zod (`createLicenseSchema`).
+       - Input Nama Pelanggan & Email (opsional), serta toggle Kunci Kustom / Format Acak Kriptografis.
+       - Tampilan status sukses: Kunci lisensi dalam box monospace besar, badge status `Belum Digunakan (used=false)`, tombol Salin Kunci dengan feedback `Tersalin!`, ringkasan pemesan, dan instruksi pengiriman.
+     - [`admin-dashboard-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-dashboard-view.tsx):
+       - Menambahkan tombol utama `+ Buat Lisensi Baru` pada Welcome Banner, tombol `+ Tambah` pada header tabel, dan tombol `+ Buat Lisensi Pertama` pada empty state.
+       - Menampilkan notifikasi banner hijau saat lisensi baru berhasil dibuat dan otomatis memicu `refresh()` statistik.
+     - [`features/admin/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/index.ts): Mengekspor `CreateLicenseModal` dan `useCreateLicense`.
+  6. **Automated E2E Testing Suite (`e2e/admin-add-license.spec.ts`):**
+     - [`e2e/admin-add-license.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/admin-add-license.spec.ts):
+       - Skenario 1: Buka modal, generate lisensi acak, verifikasi format `FCC-XXXX-XXXX-XXXX-XXXX`, verifikasi status `used=false`, salin kunci, dan verifikasi muncul di dasbor.
+       - Skenario 2: Pembuatan kunci kustom dan penegakan keunikan lisensi (menolak kunci duplikat).
+       - Skenario 3: Memastikan request anonim ke `POST /api/admin/licenses` ditolak dengan status 401.
+       - Skenario 4: Memastikan request dengan format payload salah ditolak dengan status 400.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 24 terpenuhi:
+    1. Kunci lisensi kriptografis unik berhasil di-generate secara acak.
+    2. Lisensi tersimpan ke Supabase / mock backend dengan `used=false`.
+    3. Lisensi tampil jelas di modal dan dasbor lengkap dengan tombol salin kunci.
+    4. Seluruh 4 skenario Playwright di `e2e/admin-add-license.spec.ts` dan total 26 skenario E2E aplikasi lulus 100% (`26 passed`).
+    5. Production build Next.js (`pnpm run build`) sukses 100% (25 routes, 0 errors).
+
+---
+
+## 27. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1047,12 +1101,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 20** | Implement PWA/offline support (Manifest, icons, service worker, caching, install) | Selesai | Terverifikasi lokal |
 | **Step 21** | Implement license database (Supabase project/table, MVP schema) | Selesai | Terverifikasi lokal |
 | **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | Selesai | Terverifikasi lokal |
-| **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | **Selesai** | Terverifikasi lokal |
-| **Step 24** | Implement license creation (Admin form to generate/insert new license keys) | **Langkah Selanjutnya** | Menunggu instruksi |
-
-
-
-
-
-
-
+| **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | Selesai | Terverifikasi lokal |
+| **Step 24** | Implement add license (Cryptographic license generator, insert Supabase, used=false, modal & copy) | **Selesai** | Terverifikasi lokal |
+| **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | **Langkah Selanjutnya** | Menunggu instruksi |

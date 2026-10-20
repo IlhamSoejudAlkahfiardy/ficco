@@ -47,3 +47,10 @@ export interface AdminDashboardStatsResponse {
   stats?: AdminLicenseStats;
   error?: string;
 }
+
+export interface CreateLicenseResponse {
+  success: boolean;
+  license?: import('@/features/license').License;
+  error?: string;
+  message?: string;
+}

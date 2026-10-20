@@ -5,11 +5,15 @@ import Link from 'next/link';
 import { Icons, DatabaseIcon, CopyIcon } from '@/shared/_components/icons';
 import { useAdminAuth } from '../_hooks/use-admin-auth';
 import { useAdminDashboard } from '../_hooks/use-admin-dashboard';
+import { CreateLicenseModal } from './create-license-modal';
+import type { License } from '@/features/license';
 
 export function AdminDashboardView() {
   const { user, logout } = useAdminAuth();
   const { stats, isLoading, isRefreshing, error, refresh, seedDemoData } = useAdminDashboard();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
   const handleCopyKey = (key: string) => {
     if (navigator?.clipboard?.writeText) {
@@ -19,6 +23,11 @@ export function AdminDashboardView() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleLicenseCreated = (license: License) => {
+    refresh();
+    setSuccessBanner(`Kunci lisensi ${license.licenseKey} berhasil dibuat dan disimpan.`);
+    setTimeout(() => setSuccessBanner(null), 5000);
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn">
@@ -58,6 +67,17 @@ export function AdminDashboardView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Step 24: Primary Add License Button */}
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              data-testid="open-create-license-modal-btn"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer active:scale-95"
+            >
+              <Icons.plus size={14} />
+              <span>Buat Lisensi Baru</span>
+            </button>
+
             <button
               type="button"
               onClick={() => refresh()}
@@ -90,6 +110,27 @@ export function AdminDashboardView() {
           </div>
         </div>
       </div>
+
+      {/* Success Notification Banner */}
+      {successBanner && (
+        <div
+          role="status"
+          className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-200 text-xs flex items-center justify-between gap-3 animate-fadeIn"
+          data-testid="success-banner"
+        >
+          <div className="flex items-center gap-2.5">
+            <Icons.checkCircle size={18} className="text-emerald-400 shrink-0" />
+            <span className="font-medium">{successBanner}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessBanner(null)}
+            className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
 
       {/* Error Alert */}
       {error && (
@@ -272,7 +313,17 @@ export function AdminDashboardView() {
             <Icons.clock size={16} className="text-blue-400" />
             <span>Aktivitas Lisensi Terbaru</span>
           </h3>
-          <span className="text-xs text-slate-400">5 Lisensi Terakhir</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs text-slate-400">5 Lisensi Terakhir</span>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Icons.plus size={12} />
+              <span>Tambah</span>
+            </button>
+          </div>
         </div>
 
         <div className="rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md overflow-hidden">
@@ -282,14 +333,22 @@ export function AdminDashboardView() {
               <span>Memuat data lisensi dari database...</span>
             </div>
           ) : !stats || stats.recentLicenses.length === 0 ? (
-            <div className="p-8 text-center space-y-2">
+            <div className="p-8 text-center space-y-3">
               <div className="w-10 h-10 rounded-full bg-slate-700/60 text-slate-400 mx-auto flex items-center justify-center">
                 <Icons.key size={20} />
               </div>
               <p className="text-sm font-semibold text-slate-300">Belum ada lisensi di database</p>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Lisensi yang dibuat melalui panel admin atau seeder akan muncul di sini secara otomatis.
+                Lisensi yang dibuat melalui tombol &ldquo;Buat Lisensi Baru&rdquo; atau seeder akan muncul di sini secara otomatis.
               </p>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <Icons.plus size={14} />
+                <span>Buat Lisensi Pertama</span>
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -372,6 +431,13 @@ export function AdminDashboardView() {
           </p>
         </div>
       </div>
+
+      {/* Step 24: Create License Modal */}
+      <CreateLicenseModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onLicenseCreated={handleLicenseCreated}
+      />
     </div>
   );
 }
