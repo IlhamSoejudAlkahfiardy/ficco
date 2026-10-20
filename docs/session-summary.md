@@ -1075,7 +1075,62 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 27. Status Saat Ini & Langkah Berikutnya
+## 27. Pengerjaan Step 25 — Implement license list
+
+* **Tujuan Fitur:**
+  Mengimplementasikan manajemen dan daftar lisensi komersial terpadu (*License List & Complete Management*) sesuai spesifikasi resmi Step 25 dan Bagian 21 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan tabel daftar lisensi (*license list*) interaktif yang memuat informasi lengkap: Kunci Lisensi, Status Badge, Nama & Email Pelanggan, Device Fingerprint & Tanggal Aktivasi (jika sudah digunakan), serta Tanggal Dibuat.
+  - Menyediakan bilah pencarian instan (*real-time search*) berdasarkan kunci lisensi, nama pelanggan, email, maupun device ID.
+  - Menyediakan tab filter status (*status filter pills*): Semua (`all`), Belum Digunakan / Tersedia (`unused`), dan Sudah Digunakan (`used`) lengkap dengan badge hitungan data.
+  - Menyediakan tombol salin kunci (*copy button*) untuk setiap baris lisensi dengan feedback visual animasi "Tersalin!".
+  - Menyediakan fitur ubah status penggunaan (*toggle used state*) dengan aksi "Tandai Digunakan" / "Tandai Tersedia" yang memperbarui status di database secara asinkron.
+  - Menyediakan fitur hapus lisensi (*delete license*) lengkap dengan modal dialog konfirmasi untuk mencegah penghapusan yang tidak disengaja.
+  - Menghubungkan mutasi lisensi (tambah, ubah status, hapus) dengan pembaruan otomatis pada metrik statistik dasbor atas (Total, Used, Unused).
+
+* **Detail Implementasi:**
+  1. **Infrastruktur Mock & Supabase Client (`infrastructure/supabase/`):**
+     - [`client.ts`](file:///D:/DOT%20Indonesia/Project/ficco/infrastructure/supabase/client.ts):
+       - Menambahkan kapabilitas operasi `delete()` pada builder mock Supabase client untuk mendukung penghapusan lisensi di lingkungan lokal development dan pengujian Playwright.
+  2. **Repository Lisensi (`features/license/_services/`):**
+     - [`supabase-license-repository.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/supabase-license-repository.ts):
+       - Menambahkan metode `delete(id: string)`: Menghapus record lisensi dari tabel Supabase.
+       - Menambahkan metode `setUsedState(id: string, used: boolean)`: Memperbarui status `used`, `activated_at`, dan `device_fingerprint`.
+       - Memperbarui metode `getAll(filters?)`: Mendukung filter status `used` dan parameter query `search`.
+  3. **Admin API Route Handlers (`app/api/admin/licenses/`):**
+     - [`route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/admin/licenses/route.ts):
+       - `GET`: Mengambil seluruh daftar lisensi dengan dukungan query filter `?used=true|false` dan `?search=...`.
+       - `PATCH`: Memverifikasi sesi admin, menerima `{ id, used }`, dan memanggil `SupabaseLicenseRepository.setUsedState()`.
+       - `DELETE`: Memverifikasi sesi admin, menerima `id` melalui query param atau request body, dan memanggil `SupabaseLicenseRepository.delete()`.
+  4. **Domain Types & Hook Reaktif (`features/admin/`):**
+     - [`admin.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_types/admin.types.ts):
+       - Menambahkan tipe `LicenseFilterType` (`'all' | 'used' | 'unused'`), `LicenseListResponse`, `ToggleLicenseResponse`, dan `DeleteLicenseResponse`.
+     - [`use-license-list.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_hooks/use-license-list.ts):
+       - Hook React `'use client'` untuk memuat lisensi, memfilter data secara reaktif, mengeksekusi pencarian, mengubah status `toggleUsed`, serta mengeksekusi `deleteLicense`.
+  5. **Komponen Visual UI (`features/admin/_components/`):**
+     - [`admin-license-list.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-license-list.tsx):
+       - Komponen manajemen tabel lisensi lengkap dengan input pencarian, tombol filter status (`Semua`, `Belum Digunakan`, `Digunakan`), tombol refresh cepat, tombol tambah lisensi, badge status dinamis, tombol salin kunci, tombol toggle status, tombol hapus, dan modal dialog konfirmasi hapus.
+     - [`admin-dashboard-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_components/admin-dashboard-view.tsx):
+       - Mengintegrasikan `<AdminLicenseList>` sebagai tampilan tabel utama dasbor dengan sinkronisasi reaktif `key={listRefreshKey}`.
+     - [`features/admin/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/index.ts): Mengekspor `AdminLicenseList` dan `useLicenseList`.
+  6. **Automated E2E Testing Suite (`e2e/admin-license-list.spec.ts`):**
+     - [`e2e/admin-license-list.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/admin-license-list.spec.ts):
+       - Skenario 1: Verifikasi tabel lisensi, input pencarian, tab filter, dan kolom aksi manajemen.
+       - Skenario 2: Verifikasi pencarian lisensi secara real-time berdasarkan nama/kunci.
+       - Skenario 3: Verifikasi filter status digunakan vs belum digunakan.
+       - Skenario 4: Verifikasi fungsionalitas tombol salin kunci lisensi ke clipboard ("Tersalin!").
+       - Skenario 5: Verifikasi aksi toggle used state (Tandai Digunakan <-> Tandai Tersedia) dan pembaruan badge status.
+       - Skenario 6: Verifikasi penghapusan lisensi melalui modal dialog konfirmasi.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 25 terpenuhi:
+    1. Admin dapat mengelola lisensi secara menyeluruh (List, Search, Filter, Copy, Toggle Used, Delete).
+    2. Seluruh 6 skenario Playwright di `e2e/admin-license-list.spec.ts` lulus 100%.
+    3. Seluruh 32 skenario pengujian E2E aplikasi lulus 100% (`32 passed`).
+    4. Production build Next.js (`pnpm run build`) berhasil 100% (25 routes, 0 errors).
+
+---
+
+## 28. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1102,5 +1157,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 21** | Implement license database (Supabase project/table, MVP schema) | Selesai | Terverifikasi lokal |
 | **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | Selesai | Terverifikasi lokal |
 | **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | Selesai | Terverifikasi lokal |
-| **Step 24** | Implement add license (Cryptographic license generator, insert Supabase, used=false, modal & copy) | **Selesai** | Terverifikasi lokal |
-| **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 24** | Implement add license (Cryptographic license generator, insert Supabase, used=false, modal & copy) | Selesai | Terverifikasi lokal |
+| **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | **Selesai** | Terverifikasi lokal |
+| **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | **Langkah Selanjutnya** | Menunggu instruksi |

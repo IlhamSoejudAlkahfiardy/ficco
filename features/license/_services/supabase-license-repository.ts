@@ -31,8 +31,9 @@ function mapRowToLicense(row: LicenseRow): License {
 export class SupabaseLicenseRepository {
   /**
    * Retrieves all licenses from the Supabase licenses table (server-side only)
+   * Supports optional filtering by `used` and keyword `search`.
    */
-  static async getAll(filters?: { used?: boolean }): Promise<License[]> {
+  static async getAll(filters?: { used?: boolean; search?: string }): Promise<License[]> {
     const supabase = getSupabaseServerClient();
     let query = supabase.from('licenses').select('*').order('created_at', { ascending: false });
 
@@ -45,7 +46,19 @@ export class SupabaseLicenseRepository {
       throw new Error(`[SupabaseLicenseRepository.getAll] ${error.message}`);
     }
 
-    return (data as LicenseRow[] || []).map(mapRowToLicense);
+    let rows = (data as LicenseRow[] || []).map(mapRowToLicense);
+
+    if (filters?.search && filters.search.trim().length > 0) {
+      const q = filters.search.trim().toLowerCase();
+      rows = rows.filter(
+        (lic) =>
+          lic.licenseKey.toLowerCase().includes(q) ||
+          (lic.customerName && lic.customerName.toLowerCase().includes(q)) ||
+          (lic.customerEmail && lic.customerEmail.toLowerCase().includes(q))
+      );
+    }
+
+    return rows;
   }
 
   /**
@@ -110,6 +123,53 @@ export class SupabaseLicenseRepository {
 
     if (error) {
       throw new Error(`[SupabaseLicenseRepository.create] ${error.message}`);
+    }
+
+    return mapRowToLicense(data as LicenseRow);
+  }
+
+  /**
+   * Deletes a license by its unique ID (Step 25: Delete license)
+   */
+  static async delete(id: string): Promise<boolean> {
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase
+      .from('licenses')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`[SupabaseLicenseRepository.delete] ${error.message}`);
+    }
+
+    return true;
+  }
+
+  /**
+   * Toggles or updates the used state of a license (Step 25: Toggle used state)
+   */
+  static async setUsedState(id: string, used: boolean): Promise<License> {
+    const supabase = getSupabaseServerClient();
+    const now = new Date().toISOString();
+
+    const updatePayload: { used: boolean; activated_at: string | null; device_fingerprint?: string | null } = {
+      used,
+      activated_at: used ? now : null,
+    };
+
+    if (!used) {
+      updatePayload.device_fingerprint = null;
+    }
+
+    const { data, error } = await supabase
+      .from('licenses')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      throw new Error(`[SupabaseLicenseRepository.setUsedState] ${error?.message || 'Update failed'}`);
     }
 
     return mapRowToLicense(data as LicenseRow);
@@ -277,4 +337,3 @@ export class SupabaseLicenseRepository {
     return createdList;
   }
 }
-

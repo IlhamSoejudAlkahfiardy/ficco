@@ -64,6 +64,7 @@ function createMockSupabaseClient(): SupabaseClient<Database> {
       let selectedRows = Array.from(mockLicenseStorage.values());
       let pendingUpdates: Partial<LicenseUpdate> | null = null;
       let pendingInsert: LicenseInsert | LicenseInsert[] | null = null;
+      let isDelete = false;
       let isSingle = false;
 
       const queryBuilder = {
@@ -93,6 +94,10 @@ function createMockSupabaseClient(): SupabaseClient<Database> {
         },
         update: (data: Partial<LicenseUpdate>) => {
           pendingUpdates = data;
+          return queryBuilder;
+        },
+        delete: () => {
+          isDelete = true;
           return queryBuilder;
         },
         single: () => {
@@ -140,7 +145,24 @@ function createMockSupabaseClient(): SupabaseClient<Database> {
             return;
           }
 
-          // 2. Handle UPDATE
+          // 2. Handle DELETE
+          if (isDelete) {
+            const deletedRows: LicenseRow[] = [];
+            for (const row of selectedRows) {
+              if (mockLicenseStorage.has(row.id)) {
+                deletedRows.push(row);
+                mockLicenseStorage.delete(row.id);
+              }
+            }
+
+            resolve({
+              data: isSingle ? deletedRows[0] || null : deletedRows,
+              error: null,
+            });
+            return;
+          }
+
+          // 3. Handle UPDATE
           if (pendingUpdates) {
             const updatedRows: LicenseRow[] = [];
             for (const row of selectedRows) {
@@ -162,7 +184,7 @@ function createMockSupabaseClient(): SupabaseClient<Database> {
             return;
           }
 
-          // 3. Handle SELECT
+          // 4. Handle SELECT
           if (isSingle) {
             const result = selectedRows[0] || null;
             resolve({

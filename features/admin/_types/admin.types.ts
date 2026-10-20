@@ -1,6 +1,6 @@
 /**
  * Admin domain and authentication types
- * Source of Truth: docs/invoice-expense-prd-blueprint.md (Section 20 & Step 22)
+ * Source of Truth: docs/invoice-expense-prd-blueprint.md (Section 20 & Step 22-25)
  */
 
 export interface AdminUser {
@@ -51,6 +51,27 @@ export interface AdminDashboardStatsResponse {
 export interface CreateLicenseResponse {
   success: boolean;
   license?: import('@/features/license').License;
+  error?: string;
+  message?: string;
+}
+
+export type LicenseFilterType = 'all' | 'used' | 'unused';
+
+export interface LicenseListResponse {
+  success: boolean;
+  licenses?: import('@/features/license').License[];
+  error?: string;
+}
+
+export interface ToggleLicenseResponse {
+  success: boolean;
+  license?: import('@/features/license').License;
+  error?: string;
+  message?: string;
+}
+
+export interface DeleteLicenseResponse {
+  success: boolean;
   error?: string;
   message?: string;
 }

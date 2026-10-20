@@ -24,12 +24,18 @@ export async function GET(request: NextRequest) {
     // 2. Optional query filters
     const { searchParams } = new URL(request.url);
     const usedParam = searchParams.get('used');
-    const filters =
-      usedParam === 'true'
-        ? { used: true }
-        : usedParam === 'false'
-        ? { used: false }
-        : undefined;
+    const searchParam = searchParams.get('search') || undefined;
+
+    const filters: { used?: boolean; search?: string } = {};
+    if (usedParam === 'true') {
+      filters.used = true;
+    } else if (usedParam === 'false') {
+      filters.used = false;
+    }
+
+    if (searchParam && searchParam.trim().length > 0) {
+      filters.search = searchParam.trim();
+    }
 
     const licenses = await SupabaseLicenseRepository.getAll(filters);
 
@@ -109,6 +115,98 @@ export async function POST(request: NextRequest) {
           : message,
       },
       { status: isDuplicate ? 400 : 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    // 1. Verify admin session cookie
+    const sessionCookie = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+    const session = await verifyAdminSessionToken(sessionCookie);
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Sesi admin diperlukan untuk mengubah status lisensi' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Parse request body
+    const body = await request.json().catch(() => ({}));
+    const { id, used } = body;
+
+    if (!id || typeof id !== 'string' || typeof used !== 'boolean') {
+      return NextResponse.json(
+        { success: false, error: 'Parameter id (string) dan used (boolean) wajib disertakan' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Toggle/update used state
+    const updated = await SupabaseLicenseRepository.setUsedState(id, used);
+
+    return NextResponse.json({
+      success: true,
+      message: `Status lisensi berhasil diubah menjadi ${used ? 'Digunakan' : 'Belum Digunakan'}.`,
+      license: updated,
+    });
+  } catch (error) {
+    console.error('[API /api/admin/licenses PATCH] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Gagal memperbarui status lisensi',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // 1. Verify admin session cookie
+    const sessionCookie = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+    const session = await verifyAdminSessionToken(sessionCookie);
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Sesi admin diperlukan untuk menghapus lisensi' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Extract id from query params or body
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get('id');
+
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body.id;
+    }
+
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Parameter id lisensi yang ingin dihapus wajib disertakan' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Delete from repository
+    await SupabaseLicenseRepository.delete(id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Lisensi berhasil dihapus dari sistem.',
+    });
+  } catch (error) {
+    console.error('[API /api/admin/licenses DELETE] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Gagal menghapus lisensi',
+      },
+      { status: 500 }
     );
   }
 }

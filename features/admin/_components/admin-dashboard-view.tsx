@@ -2,31 +2,30 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Icons, DatabaseIcon, CopyIcon } from '@/shared/_components/icons';
+import { Icons, DatabaseIcon } from '@/shared/_components/icons';
 import { useAdminAuth } from '../_hooks/use-admin-auth';
 import { useAdminDashboard } from '../_hooks/use-admin-dashboard';
 import { CreateLicenseModal } from './create-license-modal';
+import { AdminLicenseList } from './admin-license-list';
 import type { License } from '@/features/license';
 
 export function AdminDashboardView() {
   const { user, logout } = useAdminAuth();
   const { stats, isLoading, isRefreshing, error, refresh, seedDemoData } = useAdminDashboard();
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
-
-  const handleCopyKey = (key: string) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(key).catch(() => {});
-    }
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
+  const [listRefreshKey, setListRefreshKey] = useState(0);
 
   const handleLicenseCreated = (license: License) => {
     refresh();
+    setListRefreshKey((prev) => prev + 1);
     setSuccessBanner(`Kunci lisensi ${license.licenseKey} berhasil dibuat dan disimpan.`);
     setTimeout(() => setSuccessBanner(null), 5000);
+  };
+
+  const handleSeed = async () => {
+    await seedDemoData();
+    setListRefreshKey((prev) => prev + 1);
   };
 
   return (
@@ -296,7 +295,7 @@ export function AdminDashboardView() {
           </div>
           <button
             type="button"
-            onClick={seedDemoData}
+            onClick={handleSeed}
             disabled={isRefreshing}
             className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
           >
@@ -306,115 +305,21 @@ export function AdminDashboardView() {
         </div>
       )}
 
-      {/* Recent Licenses Table */}
+      {/* Step 25: Full License Management List (Search, Filter, Copy, Toggle Used, Delete) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <Icons.clock size={16} className="text-blue-400" />
-            <span>Aktivitas Lisensi Terbaru</span>
+            <Icons.key size={16} className="text-blue-400" />
+            <span>Aktivitas Lisensi Terbaru — Manajemen & Daftar Kunci Lisensi (Step 25)</span>
           </h3>
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs text-slate-400">5 Lisensi Terakhir</span>
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Icons.plus size={12} />
-              <span>Tambah</span>
-            </button>
-          </div>
+          <span className="text-xs text-slate-400">Pencarian, Filter & Kendali Penuh</span>
         </div>
 
-        <div className="rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md overflow-hidden">
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
-              <Icons.loader size={16} className="animate-spin text-blue-400" />
-              <span>Memuat data lisensi dari database...</span>
-            </div>
-          ) : !stats || stats.recentLicenses.length === 0 ? (
-            <div className="p-8 text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-slate-700/60 text-slate-400 mx-auto flex items-center justify-center">
-                <Icons.key size={20} />
-              </div>
-              <p className="text-sm font-semibold text-slate-300">Belum ada lisensi di database</p>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Lisensi yang dibuat melalui tombol &ldquo;Buat Lisensi Baru&rdquo; atau seeder akan muncul di sini secara otomatis.
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-md"
-              >
-                <Icons.plus size={14} />
-                <span>Buat Lisensi Pertama</span>
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-700/80 bg-slate-900/60 text-slate-400 uppercase text-[11px] font-semibold">
-                    <th className="py-3 px-4">Kunci Lisensi</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Pelanggan</th>
-                    <th className="py-3 px-4">Tanggal Dibuat</th>
-                    <th className="py-3 px-4">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50 text-slate-200">
-                  {stats.recentLicenses.map((lic) => (
-                    <tr key={lic.id} className="hover:bg-slate-750/50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-semibold text-blue-400">
-                        {lic.licenseKey}
-                      </td>
-                      <td className="py-3 px-4">
-                        {lic.used ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            Digunakan
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Tersedia
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>
-                          <span className="font-medium text-white block">
-                            {lic.customerName || '—'}
-                          </span>
-                          <span className="text-[11px] text-slate-400 block">
-                            {lic.customerEmail || '—'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(lic.createdAt).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyKey(lic.licenseKey)}
-                          className="px-2.5 py-1 rounded text-[11px] font-medium bg-slate-750 hover:bg-slate-700 text-slate-200 border border-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <CopyIcon size={12} />
-                          <span>{copiedKey === lic.licenseKey ? 'Tersalin!' : 'Salin'}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <AdminLicenseList
+          key={listRefreshKey}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+          onStatsRefreshNeeded={refresh}
+        />
       </div>
 
       {/* Blueprint Architecture Guardrail Note */}
@@ -427,7 +332,7 @@ export function AdminDashboardView() {
             Kepatuhan Arsitektur Local-First & Zero-Knowledge
           </span>
           <p className="text-slate-300 leading-relaxed">
-            Statistik di atas berasal secara eksklusif dari tabel <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono">public.licenses</code> Supabase. Seluruh data transaksi bisnis penyewa (faktur, pengeluaran, daftar pelanggan, laporan) disimpan secara lokal di IndexedDB masing-masing perangkat dan tidak pernah ditransmisikan ke server.
+            Statistik dan daftar lisensi di atas berasal secara eksklusif dari tabel <code className="px-1 py-0.5 rounded bg-blue-900/60 font-mono">public.licenses</code> Supabase. Seluruh data transaksi bisnis penyewa (faktur, pengeluaran, daftar pelanggan, laporan) disimpan secara lokal di IndexedDB masing-masing perangkat dan tidak pernah ditransmisikan ke server.
           </p>
         </div>
       </div>
