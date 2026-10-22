@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 import fs from 'fs';
+import { seedActiveLicense } from './support/license-helper';
 
 test.describe('Step 19: Backup UX & Data Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedActiveLicense(page);
+  });
   test('should display Data Management view with all required metrics and visual workflow', async ({ page }) => {
     // 1. Navigate to Settings page with data-management tab
     await page.goto('/settings?tab=data-management');

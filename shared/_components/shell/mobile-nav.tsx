@@ -6,11 +6,14 @@ import { usePathname } from 'next/navigation';
 import { Icons } from '../icons';
 import { MAIN_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../../_constants/navigation';
 import { useShellStore } from '../../_hooks/use-shell-store';
+import { useLicenseStore } from '@/features/license';
 
 export const MobileNav: React.FC = () => {
   const pathname = usePathname();
   const prevPathname = useRef(pathname);
   const { isMobileNavOpen, closeMobileNav } = useShellStore();
+  const isLicenseActivated = useLicenseStore((state) => state.isActivated);
+  const isLicenseHydrated = useLicenseStore((state) => state.isHydrated);
 
   // Close ONLY when route genuinely changes, not on mount
   useEffect(() => {
@@ -141,16 +144,27 @@ export const MobileNav: React.FC = () => {
                   key={item.key}
                   href={item.href}
                   onClick={closeMobileNav}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                     active
                       ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
                       : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800'
                   }`}
                 >
-                  <span className={active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-zinc-500'}>
-                    <Icon size={20} />
-                  </span>
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-zinc-500'}>
+                      <Icon size={20} />
+                    </span>
+                    <span>{item.label}</span>
+                  </div>
+                  {item.key === 'license' && isLicenseHydrated && (
+                    isLicenseActivated ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20">
+                        Aktifkan
+                      </span>
+                    )
+                  )}
                 </Link>
               );
             })}

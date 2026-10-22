@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { seedActiveLicense } from './support/license-helper';
 
 test.describe('Step 20: PWA & Offline Support', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedActiveLicense(page);
+  });
   test('should provide valid PWA manifest and accessible icons', async ({ request }) => {
     // 1. Verify manifest endpoint
     const manifestRes = await request.get('/manifest.json');

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import {
   ActivateLicenseInput,
@@ -13,6 +14,13 @@ import { Icons, CopyIcon } from '@/shared/_components/icons';
 export function LicenseActivationView() {
   const [copiedKey, setCopiedKey] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+
+  const searchParams = useSearchParams();
+  const rawFrom = searchParams.get('from');
+  const redirectFrom =
+    rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//')
+      ? rawFrom
+      : null;
 
   const {
     isActivating,
@@ -95,6 +103,8 @@ export function LicenseActivationView() {
             <span>Step 26: Customer License Activation</span>
             <span className="text-slate-300 dark:text-zinc-600">|</span>
             <span>Step 27: Local License State</span>
+            <span className="text-slate-300 dark:text-zinc-600">|</span>
+            <span>Step 28: Protect Application Access</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Aktivasi Lisensi Perangkat
@@ -119,6 +129,19 @@ export function LicenseActivationView() {
           )}
         </div>
       </div>
+
+      {/* Redirect Notice if routed from protected area */}
+      {redirectFrom && !isCurrentlyActive && (
+        <div
+          data-testid="license-redirect-from-notice"
+          className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs sm:text-sm animate-in fade-in"
+        >
+          <Icons.lock size={18} className="shrink-0 text-amber-500" />
+          <p>
+            Halaman <strong className="font-mono bg-amber-500/10 px-1.5 py-0.5 rounded text-amber-900 dark:text-amber-200">{redirectFrom}</strong> memerlukan aktivasi lisensi. Silakan aktifkan perangkat ini untuk membuka akses penuh.
+          </p>
+        </div>
+      )}
 
       {/* Activated State Banner */}
       {isCurrentlyActive && activatedLicense && (
@@ -202,9 +225,25 @@ export function LicenseActivationView() {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
+            {redirectFrom && (
+              <Link
+                href={redirectFrom}
+                data-testid="continue-to-destination-btn"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm transition shadow-sm"
+              >
+                <Icons.chevronRight size={16} />
+                <span>Lanjutkan ke ({redirectFrom})</span>
+              </Link>
+            )}
+
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-medium text-sm transition shadow-sm"
+              data-testid="open-dashboard-btn"
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${
+                redirectFrom
+                  ? 'bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+              } active:scale-95 font-medium text-sm transition`}
             >
               <Icons.dashboard size={16} />
               <span>Buka Dashboard Aplikasi</span>
@@ -321,7 +360,11 @@ export function LicenseActivationView() {
               <div className="flex items-center gap-2 text-slate-500 dark:text-zinc-400">
                 <Icons.shield size={14} className="text-slate-400" />
                 <span>ID Perangkat Anda:</span>
-                <span data-testid="device-fingerprint-display" className="font-mono font-medium text-slate-700 dark:text-zinc-300">
+                <span
+                  data-testid="device-fingerprint-display"
+                  suppressHydrationWarning
+                  className="font-mono font-medium text-slate-700 dark:text-zinc-300"
+                >
                   {deviceId || 'DEV-INITIALIZING'}
                 </span>
               </div>

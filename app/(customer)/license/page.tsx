@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Metadata } from 'next';
 import { LicenseActivationView } from '@/features/license';
 
@@ -8,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function LicensePage() {
-  return <LicenseActivationView />;
+  return (
+    <Suspense fallback={null}>
+      <LicenseActivationView />
+    </Suspense>
+  );
 }

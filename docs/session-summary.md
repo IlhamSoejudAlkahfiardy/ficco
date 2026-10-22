@@ -1234,7 +1234,55 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 30. Status Saat Ini & Langkah Berikutnya
+## 30. Pengerjaan Step 28 — Protect Application Access
+
+* **Tujuan Fitur:** Menentukan dan mengimplementasikan UX proteksi akses aplikasi yang tegas dan seamless: perangkat yang **belum diaktivasi (*Not activated*)** diarahkan ke layar lisensi (*License screen*), sedangkan perangkat yang **sudah diaktivasi (*Activated*)** memperoleh akses penuh ke seluruh fitur aplikasi (*Application*), dengan jaminan mutlak **tidak menghubungi server lisensi pada setiap operasi lokal**.
+* **Detail Implementasi:**
+  1. **License Guard Infrastructure & Route Protection (`features/license/`):**
+     - [`_hooks/use-license-guard.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_hooks/use-license-guard.ts):
+       - Menyediakan utilitas `isPathProtected(pathname)` untuk memisahkan rute publik (`/license`, `/offline`, `/admin-dashboard*`, `/api*`) dari rute bisnis yang dilindungi.
+       - Menyediakan hook `useLicenseGuard()` yang mengevaluasi status hidrasi (`isHydrated`), aktivasi (`isActivated`), dan izin akses (`isAllowed`).
+     - [`_components/license-guard.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_components/license-guard.tsx):
+       - Komponen pembungkus level layout yang mencegat navigasi ke halaman bisnis jika lisensi belum aktif.
+       - Mengalihkan pengguna unactivated ke `/license?from=<pathname>` menggunakan `router.replace` dan merender kartu penahan (*License Gate Barrier*) dengan tombol aksi cepat.
+       - Menjaga integritas SSR dan caching offline PWA dengan tetap merender konten awal tanpa memicu mismatch hidrasi.
+     - [`index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/index.ts):
+       - Mengekspor `LicenseGuard`, `useLicenseGuard`, `PUBLIC_ROUTES`, dan `isPathProtected`.
+  2. **Root Home Route Gate (`app/page.tsx`):**
+     - [`app/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/page.tsx):
+       - Mengarahkan rute `/` secara dinamis dan reaktif: jika teraktivasi langsung ke `/dashboard`, jika belum teraktivasi langsung ke `/license`.
+  3. **Customer Shell Layout Integration (`app/(customer)/layout.tsx`):**
+     - [`app/(customer)/layout.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/(customer)/layout.tsx):
+       - Membungkus seluruh halaman bisnis customer (`<AppShell>`) dengan `<LicenseGuard>`.
+  4. **Peningkatan UX Halaman Aktivasi & Shell Navigation:**
+     - [`features/license/_components/license-activation-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_components/license-activation-view.tsx):
+       - Menangkap parameter `from` dari URL secara reaktif melalui `useSearchParams()` tanpa cascading renders.
+       - Menampilkan banner kontekstual saat pengguna dialihkan dari fitur terlindungi.
+       - Menyediakan tombol pintas `continue-to-destination-btn` setelah aktivasi berhasil untuk langsung melanjutkan ke halaman yang dituju sebelumnya.
+     - [`app/(customer)/license/page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/(customer)/license/page.tsx):
+       - Membungkus `<LicenseActivationView />` dengan `<Suspense>` boundary untuk standar SSR Next.js 16.
+     - [`shared/_components/shell/sidebar.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/shell/sidebar.tsx) & [`mobile-nav.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_components/shell/mobile-nav.tsx):
+       - Menampilkan indikator status lisensi visual (badge amber "Aktifkan" jika belum teraktivasi, dot hijau jika aktif).
+  5. **Automated E2E Testing Suite (`e2e/license-protection.spec.ts`):**
+     - [`e2e/support/license-helper.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/support/license-helper.ts):
+       - Helper pengujian untuk seeding status lisensi aktif (`seedActiveLicense`) atau pengosongan lisensi (`clearLicenseState`).
+     - [`e2e/license-protection.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/license-protection.spec.ts):
+       - 8 skenario pengujian E2E Playwright: pengalihan root `/` unactivated, pengalihan `/dashboard` dengan parameter `from`, proteksi `/invoices`, akses rute publik & admin unactivated, akses langsung root `/` activated, akses langsung rute bisnis activated, pembuktian 0 panggilan API server selama navigasi lokal, dan alur pembukaan akses instan pasca-aktivasi.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 28 terpenuhi:
+    - Not activated → License screen.
+    - Activated → Application.
+    - Do not unnecessarily contact the license server during every local operation.
+  - Seluruh 8 skenario Playwright di `e2e/license-protection.spec.ts` lulus 100%.
+  - Seluruh 50 skenario pengujian Playwright E2E aplikasi lulus 100% (`50 passed`).
+  - Simulasi ESLint `lint-staged` pada seluruh file terdampak menghasilkan **Exit code 0** (0 errors).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 31. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1264,5 +1312,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 24** | Implement add license (Cryptographic license generator, insert Supabase, used=false, modal & copy) | Selesai | Terverifikasi lokal |
 | **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | Selesai | Terverifikasi lokal |
 | **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | Selesai | Terverifikasi lokal |
-| **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | **Selesai** | Terverifikasi lokal |
-| **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | Selesai | Terverifikasi lokal |
+| **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | **Selesai** | Terverifikasi lokal |
+| **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | **Langkah Selanjutnya** | Menunggu instruksi |

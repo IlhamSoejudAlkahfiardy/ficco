@@ -6,4 +6,6 @@ export * from './_services/supabase-license-repository';
 export * from './_services/device-fingerprint';
 export * from './_stores/license-store';
 export * from './_hooks/use-activate-license';
+export * from './_hooks/use-license-guard';
 export * from './_components/license-activation-view';
+export * from './_components/license-guard';

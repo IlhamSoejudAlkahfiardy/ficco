@@ -6,10 +6,13 @@ import { usePathname } from 'next/navigation';
 import { Icons } from '../icons';
 import { MAIN_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../../_constants/navigation';
 import { useShellStore } from '../../_hooks/use-shell-store';
+import { useLicenseStore } from '@/features/license';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { isSidebarCollapsed, toggleSidebar } = useShellStore();
+  const isLicenseActivated = useLicenseStore((state) => state.isActivated);
+  const isLicenseHydrated = useLicenseStore((state) => state.isHydrated);
 
   const isLinkActive = (href: string) => {
     if (href === '/dashboard') {
@@ -112,7 +115,20 @@ export const Sidebar: React.FC = () => {
                 <span className={active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-zinc-500'}>
                   <Icon size={20} />
                 </span>
-                {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                {!isSidebarCollapsed && (
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="truncate">{item.label}</span>
+                    {item.key === 'license' && isLicenseHydrated && (
+                      isLicenseActivated ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Lisensi Aktif" />
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20">
+                          Aktifkan
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
               </Link>
             );
           })}
