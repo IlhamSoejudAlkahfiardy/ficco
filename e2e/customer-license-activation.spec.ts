@@ -8,12 +8,13 @@ test.describe('Step 26: Customer License Activation Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage on customer device before each test
     await page.goto(licensePageUrl);
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await page.evaluate(() => {
       localStorage.removeItem('ficco_activated_license');
+      localStorage.removeItem('ficco_license_store');
     });
     await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display license activation screen with inputs, device id, and educational cards', async ({
@@ -113,6 +114,7 @@ test.describe('Step 26: Customer License Activation Flow', () => {
 
     // 2. Navigate to Customer License Activation screen
     await page.goto(licensePageUrl);
+    await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('license-key-input')).toBeVisible();
 
     // 3. Fill the valid unused license key
@@ -158,6 +160,7 @@ test.describe('Step 26: Customer License Activation Flow', () => {
 
     // 2. Activate the key for the first time
     await page.goto(licensePageUrl);
+    await page.waitForLoadState('networkidle');
     await page.getByTestId('license-key-input').fill(validKey);
     await page.getByTestId('activate-license-submit-btn').click();
     await expect(page.getByTestId('activation-success-banner')).toBeVisible();
@@ -207,6 +210,7 @@ test.describe('Step 26: Customer License Activation Flow', () => {
 
     // 2. Activate with License 1
     await page.goto(licensePageUrl);
+    await page.waitForLoadState('networkidle');
     await page.getByTestId('license-key-input').fill(key1);
     await page.getByTestId('activate-license-submit-btn').click();
     await expect(page.getByTestId('activation-success-banner')).toBeVisible();

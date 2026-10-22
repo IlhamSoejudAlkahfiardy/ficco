@@ -86,7 +86,7 @@ test.describe('Step 21: License Database & Security Boundary', () => {
     expect(license.createdAt).toBeTruthy();
 
     // 2. Verify duplicate key rejection
-    const customKey = 'FCC-TEST-DUPL-KEY1-9999';
+    const customKey = `FCC-TEST-DUPL-${Date.now().toString().slice(-4)}-9999`;
     const firstCustom = await request.post('/api/license/health', {
       data: {
         customerName: 'Customer One',

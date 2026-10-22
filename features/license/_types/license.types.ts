@@ -47,6 +47,39 @@ export interface ActivateLicenseResponse {
   code?: LicenseErrorCode;
 }
 
+/**
+ * Local persisted license state (Step 27 & Section 23)
+ * Separated from business data in IndexedDB
+ */
+export interface LocalLicenseState {
+  isActivated: boolean;
+  licenseKey: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  activatedAt: string | null;
+  deviceFingerprint: string | null;
+  lastVerifiedAt: string | null;
+}
+
+export interface LicenseStoreState extends LocalLicenseState {
+  isHydrated: boolean;
+  isActivating: boolean;
+  error: string | null;
+  errorCode: LicenseErrorCode | null;
+
+  // Actions
+  setActivated: (license: License) => void;
+  clearActivation: () => void;
+  resetError: () => void;
+  setHydrated: (hydrated: boolean) => void;
+  activateWithServer: (rawLicenseKey: string) => Promise<{
+    success: boolean;
+    license?: License;
+    error?: string;
+    code?: LicenseErrorCode;
+  }>;
+}
+
 export interface LicenseDatabaseHealth {
   status: 'connected' | 'mock_connected' | 'error';
   tableExists: boolean;

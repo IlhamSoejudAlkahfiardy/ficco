@@ -93,6 +93,8 @@ export function LicenseActivationView() {
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 mb-2">
             <Icons.shield size={12} />
             <span>Step 26: Customer License Activation</span>
+            <span className="text-slate-300 dark:text-zinc-600">|</span>
+            <span>Step 27: Local License State</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Aktivasi Lisensi Perangkat
@@ -293,11 +295,7 @@ export function LicenseActivationView() {
                   spellCheck="false"
                   placeholder="FCC-XXXX-XXXX-XXXX-XXXX"
                   aria-invalid={Boolean(errors.licenseKey)}
-                  {...register('licenseKey', {
-                    onChange: (e) => {
-                      e.target.value = e.target.value.toUpperCase();
-                    },
-                  })}
+                  {...register('licenseKey')}
                   className={`w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border ${
                     errors.licenseKey
                       ? 'border-rose-500 focus:ring-rose-500/20'

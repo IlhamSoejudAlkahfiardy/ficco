@@ -1,56 +1,46 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import type {
   License,
   LicenseErrorCode,
-  ActivateLicenseResponse,
 } from '../_types/license.types';
+import { useLicenseStore } from '../_stores/license-store';
 import { getOrCreateDeviceFingerprint } from '../_services/device-fingerprint';
 
-const ACTIVATED_LICENSE_STORAGE_KEY = 'ficco_activated_license';
-
 export function useActivateLicense(onSuccess?: (license: License) => void) {
-  const [isActivating, setIsActivating] = useState<boolean>(false);
-  const [activatedLicense, setActivatedLicense] = useState<License | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<LicenseErrorCode | null>(null);
-  const [deviceId, setDeviceId] = useState<string>('');
+  const isActivated = useLicenseStore((state) => state.isActivated);
+  const licenseKey = useLicenseStore((state) => state.licenseKey);
+  const customerName = useLicenseStore((state) => state.customerName);
+  const customerEmail = useLicenseStore((state) => state.customerEmail);
+  const activatedAt = useLicenseStore((state) => state.activatedAt);
+  const deviceFingerprint = useLicenseStore((state) => state.deviceFingerprint);
+  const isActivating = useLicenseStore((state) => state.isActivating);
+  const error = useLicenseStore((state) => state.error);
+  const errorCode = useLicenseStore((state) => state.errorCode);
+  const isHydrated = useLicenseStore((state) => state.isHydrated);
 
-  // Initial read for device fingerprint and local cached license
-  useEffect(() => {
-    let ignore = false;
+  const activateWithServer = useLicenseStore((state) => state.activateWithServer);
+  const clearStoreActivation = useLicenseStore((state) => state.clearActivation);
+  const resetStoreError = useLicenseStore((state) => state.resetError);
 
-    const initDeviceAndLicense = () => {
-      try {
-        const fp = getOrCreateDeviceFingerprint();
-        const cached = localStorage.getItem(ACTIVATED_LICENSE_STORAGE_KEY);
-        let parsedLic: License | null = null;
-        if (cached) {
-          try {
-            parsedLic = JSON.parse(cached);
-          } catch {
-            parsedLic = null;
-          }
-        }
+  const deviceId = useMemo(() => {
+    return deviceFingerprint || getOrCreateDeviceFingerprint();
+  }, [deviceFingerprint]);
 
-        if (!ignore) {
-          setDeviceId(fp);
-          if (parsedLic && parsedLic.licenseKey) {
-            setActivatedLicense(parsedLic);
-          }
-        }
-      } catch {
-        // Fallback for SSR or storage disabled
-      }
+  const activatedLicense = useMemo<License | null>(() => {
+    if (!isActivated || !licenseKey) return null;
+    return {
+      id: 'local_active',
+      licenseKey,
+      used: true,
+      createdAt: activatedAt || new Date().toISOString(),
+      customerName,
+      customerEmail,
+      activatedAt,
+      deviceFingerprint: deviceId,
     };
-
-    initDeviceAndLicense();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  }, [isActivated, licenseKey, customerName, customerEmail, activatedAt, deviceId]);
 
   const activateLicense = useCallback(
     async (
@@ -61,84 +51,27 @@ export function useActivateLicense(onSuccess?: (license: License) => void) {
       error?: string;
       code?: LicenseErrorCode;
     }> => {
-      setIsActivating(true);
-      setError(null);
-      setErrorCode(null);
-
-      const deviceFp = deviceId || getOrCreateDeviceFingerprint();
-
-      try {
-        const res = await fetch('/api/license/activate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            licenseKey: rawLicenseKey,
-            deviceFingerprint: deviceFp,
-          }),
-        });
-
-        const data: ActivateLicenseResponse = await res.json().catch(() => ({
-          success: false,
-          error: 'Respon server tidak valid.',
-        }));
-
-        if (!res.ok || !data.success || !data.license) {
-          const errMsg = data.error || 'Aktivasi lisensi gagal.';
-          const code = data.code || 'DATABASE_ERROR';
-          setError(errMsg);
-          setErrorCode(code);
-          return { success: false, error: errMsg, code };
-        }
-
-        // Activation succeeded: update state and persist
-        setActivatedLicense(data.license);
-        try {
-          localStorage.setItem(
-            ACTIVATED_LICENSE_STORAGE_KEY,
-            JSON.stringify(data.license)
-          );
-        } catch {
-          // Ignore localStorage errors
-        }
-
-        if (onSuccess) {
-          onSuccess(data.license);
-        }
-
-        return { success: true, license: data.license };
-      } catch (err) {
-        const errMsg =
-          err instanceof Error ? err.message : 'Gangguan koneksi jaringan.';
-        setError(errMsg);
-        setErrorCode('DATABASE_ERROR');
-        return { success: false, error: errMsg, code: 'DATABASE_ERROR' };
-      } finally {
-        setIsActivating(false);
+      const result = await activateWithServer(rawLicenseKey);
+      if (result.success && result.license && onSuccess) {
+        onSuccess(result.license);
       }
+      return result;
     },
-    [deviceId, onSuccess]
+    [activateWithServer, onSuccess]
   );
 
   const reset = useCallback(() => {
-    setError(null);
-    setErrorCode(null);
-  }, []);
+    resetStoreError();
+  }, [resetStoreError]);
 
   const clearActivation = useCallback(() => {
-    setActivatedLicense(null);
-    setError(null);
-    setErrorCode(null);
-    try {
-      localStorage.removeItem(ACTIVATED_LICENSE_STORAGE_KEY);
-    } catch {
-      // Ignore
-    }
-  }, []);
+    clearStoreActivation();
+  }, [clearStoreActivation]);
 
   return {
+    isActivated,
     isActivating,
+    isHydrated,
     activatedLicense,
     error,
     errorCode,

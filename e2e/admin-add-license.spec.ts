@@ -25,8 +25,11 @@ test.describe('Step 24: Admin Add License & Secure Generation', () => {
     await expect(page.getByText('Step 24: Add License')).toBeVisible();
 
     // 3. Fill customer metadata (optional)
-    await page.locator('#customerName').fill('PT Sinergi Mandiri');
-    await page.locator('#customerEmail').fill('finance@sinergimandiri.id');
+    const suffix = Date.now().toString().slice(-4);
+    const customerName = `PT Sinergi Mandiri ${suffix}`;
+    const customerEmail = `finance-${suffix}@sinergimandiri.id`;
+    await page.locator('#customerName').fill(customerName);
+    await page.locator('#customerEmail').fill(customerEmail);
 
     // 4. Submit form to generate & save license
     const submitBtn = page.getByTestId('submit-create-license-btn');
@@ -56,8 +59,8 @@ test.describe('Step 24: Admin Add License & Secure Generation', () => {
     await expect(page.getByRole('cell', { name: generatedKey })).toBeVisible();
 
     // 10. Verify recent licenses table lists the new license with "Tersedia" (unused) status
-    await expect(page.getByText('PT Sinergi Mandiri')).toBeVisible();
-    await expect(page.getByText('finance@sinergimandiri.id')).toBeVisible();
+    await expect(page.getByText(customerName)).toBeVisible();
+    await expect(page.getByText(customerEmail)).toBeVisible();
   });
 
   test('should support creating a custom key and enforce uniqueness', async ({ page }) => {
