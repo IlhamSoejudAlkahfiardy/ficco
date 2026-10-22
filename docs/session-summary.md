@@ -1130,7 +1130,69 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 28. Status Saat Ini & Langkah Berikutnya
+## 28. Pengerjaan Step 26 — Implement customer license activation
+
+* **Tujuan Fitur:**
+  Mengimplementasikan antarmuka dan alur aktivasi lisensi perangkat pelanggan (*Customer License Activation Flow*) sesuai spesifikasi resmi Step 26 dan Bagian 18 dari [`docs/invoice-expense-prd-blueprint.md`](file:///D:/DOT%20Indonesia/Project/ficco/docs/invoice-expense-prd-blueprint.md).
+  - Menyediakan layar aktivasi lisensi pelanggan (*activation screen*) pada rute `/license` dengan input validasi format kunci lisensi, integrasi tombol tempel dari clipboard, serta pratinjau ID perangkat unik (*device fingerprint*).
+  - Menyediakan endpoint API `POST /api/license/activate` yang memverifikasi kunci lisensi ke Supabase di sisi server (*server-side lookup*) dengan service role key tanpa mengekspos kredensial ke client.
+  - Menolak kunci lisensi yang tidak terdaftar (*unknown / non-existent license*) dengan kode error `NOT_FOUND` (HTTP 404).
+  - Menolak kunci lisensi yang sudah pernah digunakan pada perangkat lain (*used license*) dengan kode error `ALREADY_USED` (HTTP 409).
+  - Menandai lisensi valid yang belum terpakai sebagai terpakai (`used = true`), mencatat stempel waktu aktivasi (`activated_at = now`), mengikat fingerprint perangkat (`device_fingerprint`), dan mengembalikan status sukses (HTTP 200).
+  - Menampilkan ringkasan status aktivasi sukses di sisi pelanggan (Kunci terdaftar, nama pemilik, waktu aktivasi, ID perangkat terikat, dan tautan langsung ke dasbor).
+  - Mendukung alur aktivasi ulang atau pergantian kunci (*re-activation flow*) melalui tombol "Ganti Kunci / Aktivasi Ulang".
+
+* **Detail Implementasi:**
+  1. **Domain Types & Schemas (`features/license/`):**
+     - [`license.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_types/license.types.ts):
+       - Menambahkan interface `ActivateLicenseResponse` (`success`, `message`, `license`, `error`, `code`).
+     - [`license.schemas.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_schemas/license.schemas.ts):
+       - Validasi Zod `activateLicenseSchema` memastikan panjang kunci antara 12 dan 64 karakter alfanumerik serta otomatis ditransformasikan ke huruf besar (*uppercase*).
+  2. **Device Fingerprint Infrastructure (`features/license/_services/`):**
+     - [`device-fingerprint.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_services/device-fingerprint.ts):
+       - Menyediakan fungsi `getOrCreateDeviceFingerprint()` yang membaca atau membuat pengenal unik perangkat berbasis kombinasi stempel waktu dan token acak yang disimpan persisten di `localStorage`.
+  3. **Server-side API Route Handlers (`app/api/license/activate/`):**
+     - [`route.ts`](file:///D:/DOT%20Indonesia/Project/ficco/app/api/license/activate/route.ts):
+       - `POST`: Memvalidasi payload body via Zod, memanggil `SupabaseLicenseRepository.activate(key, deviceFingerprint)`, mengembalikan status 200 jika sukses, status 404 jika `NOT_FOUND`, status 409 jika `ALREADY_USED`, status 400 jika format tidak valid, dan status 500 jika terjadi gangguan server.
+       - `GET`: Menolak request dengan status 405 Method Not Allowed dan instruksi penggunaan method `POST`.
+  4. **Domain Custom Hook (`features/license/_hooks/`):**
+     - [`use-activate-license.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_hooks/use-activate-license.ts):
+       - Mengelola state `isActivating`, `activatedLicense`, `error`, `errorCode`, dan `deviceId`.
+       - Menyediakan fungsi `activateLicense(key)` yang memanggil endpoint `POST /api/license/activate` dan menyimpan cache lisensi aktif ke storage lokal.
+       - Menyediakan fungsi `clearActivation()` dan `reset()`.
+  5. **Komponen Visual UI (`features/license/_components/`):**
+     - [`license-activation-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_components/license-activation-view.tsx):
+       - Kartu formulir aktivasi dengan input monospace berformat uppercase, tombol tempel dari clipboard, indikator device ID, penanganan status loading spinner, dan banner error peringatan.
+       - Kartu status aktivasi sukses dengan rincian kunci ber-copy button, nama pemilik, tanggal aktivasi, ID perangkat terikat, tombol cepat menuju dasbor, dan tombol aktivasi ulang.
+       - Tiga kartu edukasi Local-First: *100% Local-First & Privat*, *Operasional Offline Bebas*, dan *Satu Lisensi Satu Perangkat*.
+     - [`features/license/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/index.ts):
+       - Mengekspor seluruh komponen, hook, service, dan skema aktivasi lisensi.
+  6. **Integrasi Halaman Pelanggan (`app/(customer)/license/`):**
+     - [`page.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/app/(customer)/license/page.tsx):
+       - Merender `<LicenseActivationView />` dengan metadata halaman SEO yang lengkap.
+  7. **Automated E2E Testing Suite (`e2e/customer-license-activation.spec.ts`):**
+     - [`e2e/customer-license-activation.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/customer-license-activation.spec.ts):
+       - Skenario 1: Verifikasi rendering antarmuka aktivasi lisensi, status awal belum diaktivasi, input form, ID perangkat, dan kartu edukasi.
+       - Skenario 2: Verifikasi penolakan client-side validation jika kunci lisensi terlalu pendek (< 12 karakter).
+       - Skenario 3: Verifikasi penolakan kunci tidak terdaftar (*unknown license*) dengan HTTP 404 NOT_FOUND.
+       - Skenario 4: Verifikasi aktivasi berhasil untuk lisensi valid yang belum terpakai (*unused valid license*) dengan HTTP 200, penandaan status terpakai di database, dan rendering detail aktivasi.
+       - Skenario 5: Verifikasi penolakan lisensi yang sudah terpakai (*used license*) dengan HTTP 409 ALREADY_USED.
+       - Skenario 6: Verifikasi alur pergantian kunci atau aktivasi ulang (*re-activation flow*).
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 26 terpenuhi:
+    ```text
+    unused valid license → activation succeeds
+    used license → activation fails
+    unknown license → activation fails
+    ```
+  - Seluruh 6 skenario Playwright di `e2e/customer-license-activation.spec.ts` lulus 100%.
+  - Seluruh 38 skenario pengujian E2E aplikasi lulus 100% (`38 passed`).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes, 0 errors).
+
+---
+
+## 29. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1158,5 +1220,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 22** | Implement admin authentication (Admin login, secure session, protected admin layout, logout) | Selesai | Terverifikasi lokal |
 | **Step 23** | Implement admin dashboard (Display Total licenses, Used licenses, Unused licenses) | Selesai | Terverifikasi lokal |
 | **Step 24** | Implement add license (Cryptographic license generator, insert Supabase, used=false, modal & copy) | Selesai | Terverifikasi lokal |
-| **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | **Selesai** | Terverifikasi lokal |
-| **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | Selesai | Terverifikasi lokal |
+| **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | **Selesai** | Terverifikasi lokal |
+| **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | **Langkah Selanjutnya** | Menunggu instruksi |

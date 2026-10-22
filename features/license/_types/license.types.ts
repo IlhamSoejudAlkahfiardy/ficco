@@ -39,6 +39,14 @@ export interface LicenseValidationResult {
   code?: LicenseErrorCode;
 }
 
+export interface ActivateLicenseResponse {
+  success: boolean;
+  message?: string;
+  license?: License;
+  error?: string;
+  code?: LicenseErrorCode;
+}
+
 export interface LicenseDatabaseHealth {
   status: 'connected' | 'mock_connected' | 'error';
   tableExists: boolean;
