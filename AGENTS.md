@@ -78,6 +78,30 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
     - **Wajib Dijalankan**: Pengerjaan Step dari PRD blueprint, pembuatan modul/fitur baru, penambahan alur bisnis baru.
     - **Tidak Perlu Dijalankan**: Perbaikan bug/error kecil, linting/type fix, update dokumentasi murni.
 
+## Mandatory Build & Husky Verification Directive (Kewajiban Pengujian Build & Simulasi Husky)
+- **WAJIB SETELAH SETIAP PERUBAHAN / PENGERJAAN FITUR**:
+  - Sebelum menyatakan tugas selesai, memperbarui dokumentasi sesi, atau memberikan rekomendasi perintah commit kepada USER, agen **WAJIB** mengeksekusi rangkaian verifikasi berikut secara nyata di terminal:
+    1. **Simulasi Linter Husky (`lint-staged`)**:
+       - Jalankan ESLint pada seluruh file yang baru dibuat atau dimodifikasi dalam sesi tersebut:
+         ```bash
+         pnpm exec eslint <file1> <file2> ...
+         ```
+       - **Kriteria Kelulusan**: Wajib menghasilkan **Exit code 0** (0 errors). Jika terdapat error linter (seperti `react-hooks/set-state-in-effect`, `@typescript-eslint/no-explicit-any`, dsb.), agen **WAJIB** langsung memperbaikinya hingga benar-benar bersih sebelum melapor ke USER.
+    2. **Simulasi Validasi Tipe Data TypeScript Husky (`tsc --noEmit`)**:
+       - Jalankan validasi keamanan tipe data di seluruh proyek:
+         ```bash
+         pnpm exec tsc --noEmit
+         ```
+       - **Kriteria Kelulusan**: Wajib menghasilkan **Exit code 0** (0 type errors).
+    3. **Verifikasi Kompilasi Build Produksi Next.js (`next build`)**:
+       - Jalankan kompilasi produksi untuk memastikan tidak ada kesalahan konfigurasi rute, SSR/client boundaries, atau bundling error:
+         ```bash
+         pnpm run build
+         ```
+       - **Kriteria Kelulusan**: Wajib menghasilkan **Exit code 0** (seluruh rute statis & dinamis sukses terkompilasi).
+  - **Jaminan Bebas Error Saat Git Commit**:
+    - Melalui kepatuhan terhadap verifikasi ini, saat USER menjalankan `git add .` dan `git commit`, hook pre-commit Husky dijamin 100% lulus tanpa hambatan.
+
 ## Mandatory Commit Message Recommendation (Rekomendasi Pesan Commit)
 - **WAJIB SETELAH SETIAP PENGERJAAN**:
   - Setiap kali selesai mengerjakan sesuatu (baik fitur baru, perbaikan bug/error, refactoring, perbaikan tipe/linting, penyesuaian styling, update dokumentasi, dsb.), agen **WAJIB** menyertakan rekomendasi perintah `git add` dan `git commit` di akhir respon.
