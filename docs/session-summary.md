@@ -1361,7 +1361,33 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 33. Status Saat Ini & Langkah Berikutnya
+## 33. Pengerjaan Step 31 — Data Integrity Review
+
+* **Tujuan:** Memverifikasi ketahanan, keandalan, dan integritas data lokal 100% (*zero-knowledge local-first data integrity*) pada 10 kriteria ketat Step 31 PRD Blueprint (`docs/invoice-expense-prd-blueprint.md`), mencakup persistensi saat reload normal, penutupan/pembukaan kembali browser, mutasi transaksi saat offline, dataset besar (*large dataset*), ekspor-impor cadangan JSON atomik, penolakan berkas korup, versi skema, integritas penghapusan berjenjang (*cascading delete*) tanpa *orphan records*, serta kuota penyimpanan peramban dan diagnostik mandiri Dexie.
+* **Detail Implementasi & Cakupan Pengujian E2E:**
+  1. **Suite Pengujian Otomatis Integritas Data ([`e2e/data-integrity.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/data-integrity.spec.ts)):**
+     - **Check 1 (Refresh during normal use):** Memastikan entitas bisnis (pelanggan, faktur) yang dibuat dalam sesi normal tetap utuh tersimpan di IndexedDB (`ficco_business_db`) dan langsung tampil kembali setelah halaman direfresh secara penuh.
+     - **Check 2 (Close/reopen browser):** Mensimulasikan siklus penutupan tab dan instansiasi konteks peramban baru, membuktikan persistensi data persisten di disk peramban tanpa kehilangan state.
+     - **Check 3 (Offline use & transactional persistence):** Menguji mutasi saat perangkat berada dalam mode offline total (Airplane mode). Memverifikasi transaksi langsung ditulis ke IndexedDB lokal secara andal dan data tetap utuh ketika koneksi kembali normal serta halaman dimuat ulang.
+     - **Check 4 (Large dataset resilience):** Menyuntikkan batch transaksi besar (50 faktur dan 50 pengeluaran) secara atomik. Memverifikasi seluruh kalkulasi agregasi pada Dasbor Finansial dan Laporan Keuangan (Laba Rugi, Pendapatan, Pengeluaran) terhitung presisi tanpa menghasilkan nilai anomali `NaN`, `undefined`, atau crash antarmuka.
+     - **Check 5 (Database JSON Export integrity):** Memverifikasi berkas ekspor cadangan berformat `invoice-app-backup-YYYY-MM-DD.json`, mencakup metadata format `invoice-app-backup`, versi skema 1, dan seluruh 9 tabel entitas bisnis lengkap (`companies`, `customers`, `products`, `invoices`, `invoiceItems`, `expenses`, `expenseCategories`, `payments`, `settings`).
+     - **Check 6 (Database JSON Import & round-trip verification):** Menguji pemulihan cadangan data secara atomik, memastikan tabel dibersihkan dan dipulihkan kembali sesuai jumlah dan entitas yang diekspor tanpa inkonsistensi.
+     - **Check 7 (Import malformed JSON & transactional rollback guarantee):** Menguji penolakan ketat terhadap sintaks JSON yang korup, ketiadaan format identifier, serta tipe data yang tidak valid sebelum menyentuh basis data lokal.
+     - **Check 8 (Schema versioning):** Memvalidasi dukungan penuh untuk skema v1 aktif dan penolakan aman dengan panduan pembaruan ramah terhadap versi skema masa depan yang belum didukung (misal v99).
+     - **Check 9 (Cascading delete without orphan records):** Memverifikasi penghapusan faktur induk secara transaksional (`InvoiceRepository.deleteWithItems`) otomatis membersihkan seluruh rincian baris faktur (`invoiceItems`) dan transaksi riwayat pelunasan (`payments`) terkait, tanpa meninggalkan catatan yatim piatu (*orphan records*).
+     - **Check 10 (Browser storage persistence & diagnostic self-test):** Menguji kueri API kuota penyimpanan peramban (`navigator.storage.estimate`) dan mengeksekusi rangkaian 5 uji mandiri Dexie Foundation (`runDatabaseDiagnostics`) di antarmuka.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 31 terpenuhi.
+  - Seluruh 10 skenario Playwright di `e2e/data-integrity.spec.ts` lulus 100% (`10 passed`).
+  - Seluruh 71 skenario pengujian Playwright E2E aplikasi lulus 100% (`71 passed`).
+  - Simulasi ESLint `lint-staged` pada seluruh file terdampak menghasilkan **Exit code 0** (0 errors).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 34. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1394,5 +1420,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | Selesai | Terverifikasi lokal |
 | **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | Selesai | Terverifikasi lokal |
 | **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | Selesai | Terverifikasi lokal |
-| **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | **Selesai** | Terverifikasi lokal |
-| **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | Selesai | Terverifikasi lokal |
+| **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | **Selesai** | Terverifikasi lokal |
+| **Step 32** | Responsive QA (desktop, tablet, mobile layouts & touch controls verification) | **Langkah Selanjutnya** | Menunggu instruksi |
