@@ -63,18 +63,39 @@ async function getHmacKey(secret: string): Promise<CryptoKey> {
  * Retrieve session secret from server environment
  */
 export function getAdminSessionSecret(): string {
-  return process.env.ADMIN_SESSION_SECRET || 'ficco-dev-admin-secret-key-32-chars-long';
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (process.env.NODE_ENV === 'production' && !secret) {
+    throw new Error('[Security Exception] ADMIN_SESSION_SECRET must be configured in environment variables for production.');
+  }
+  return secret || 'ficco-dev-admin-secret-key-32-chars-long';
 }
 
 /**
  * Validate username and password against server environment variables
  */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 export function validateAdminCredentials(username: string, password: string): boolean {
   const expectedUsername = process.env.ADMIN_USERNAME || 'admin';
-  const expectedPassword = process.env.ADMIN_PASSWORD || 'ficco-admin-2026';
+  const configuredPassword = process.env.ADMIN_PASSWORD;
+  if (process.env.NODE_ENV === 'production' && !configuredPassword) {
+    console.error('[Security Warning] ADMIN_PASSWORD environment variable is not configured in production.');
+    return false;
+  }
+  const expectedPassword = configuredPassword || 'ficco-admin-2026';
 
   if (!username || !password) return false;
-  return username === expectedUsername && password === expectedPassword;
+  return (
+    constantTimeEqual(username, expectedUsername) &&
+    constantTimeEqual(password, expectedPassword)
+  );
 }
 
 /**

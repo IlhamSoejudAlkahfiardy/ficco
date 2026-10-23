@@ -1318,7 +1318,50 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 32. Status Saat Ini & Langkah Berikutnya
+## 32. Pengerjaan Step 30 — Security Review
+
+* **Tujuan:** Memverifikasi dan memperkuat (*security hardening*) seluruh postur keamanan aplikasi berdasarkan 9 kriteria ketat Step 30 PRD Blueprint (Zero-Knowledge architecture, isolasi credential server, proteksi rute admin, validasi Zod endpoint lisensi dan import JSON, penulisan basis data tervalidasi, pencegahan XSS/HTML injection, sanitasi log error, dan HTTP security headers).
+* **Detail Implementasi:**
+  1. **HTTP Security Headers ([`next.config.ts`](file:///D:/DOT%20Indonesia/Project/ficco/next.config.ts)):**
+     - Mengonfigurasi security headers global Next.js:
+       - `X-Frame-Options: SAMEORIGIN` (mencegah clickjacking).
+       - `X-Content-Type-Options: nosniff` (mencegah MIME-type sniffing).
+       - `Referrer-Policy: strict-origin-when-cross-origin` (melindungi data referrer).
+       - `Permissions-Policy: camera=(), microphone=(), geolocation=()` (membatasi akses API perangkat keras yang tidak diperlukan).
+  2. **Penguatan Otentikasi Admin ([`features/admin/_services/admin-auth-service.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/admin/_services/admin-auth-service.ts)):**
+     - Mengimplementasikan `constantTimeEqual` untuk perbandingan string username & password admin secara konstan guna mengeliminasi kerentanan *timing attacks*.
+     - Menerapkan *production guard*: memblokir fallback password default jika `process.env.ADMIN_PASSWORD` tidak terkonfigurasi di lingkungan produksi (`NODE_ENV === 'production'`).
+     - Memastikan `ADMIN_SESSION_SECRET` wajib tersedia di environment pada mode produksi.
+  3. **Verifikasi 9 Kriteria Keamanan Blueprint:**
+     - **Check 1 (No Supabase service key in client bundle):** `SUPABASE_SERVICE_ROLE_KEY` diisolasi sepenuhnya di sisi server. Pemanggilan `getSupabaseServerClient()` di sisi browser memicu security error eksplisit.
+     - **Check 2 (No admin password in source):** Password admin tidak di-hardcode sebagai kredensial valid di produksi dan selalu dibaca dari variabel lingkungan (`ADMIN_PASSWORD`).
+     - **Check 3 (No secret API credentials in client code):** Window client dan script tag bersih dari rahasia server (hanya variabel publik non-sensitif seperti `NEXT_PUBLIC_DEVELOPMENT` yang diekspos).
+     - **Check 4 (Admin routes protected):** Rute antarmuka `/admin-dashboard` diproteksi middleware dengan pengalihan ke `/admin-dashboard/login`; endpoint API administratif (`/api/admin/licenses`, `/api/admin/dashboard/stats`) menolak permintaan tanpa otentikasi dengan status 401 Unauthorized.
+     - **Check 5 (License endpoint validates input):** Endpoint `POST /api/license/activate` menggunakan `activateLicenseSchema` (Zod) untuk memvalidasi panjang kunci (12–64 karakter), penanganan sanitasi uppercase, penolakan injeksi SQL, dan menolak non-POST method dengan 405 Method Not Allowed.
+     - **Check 6 (Imported JSON validated):** Utilitas `parseAndValidateBackupJson` memvalidasi integritas JSON, identifier format `invoice-app-backup`, versi skema, serta memeriksa tipe 9 tabel entitas secara ketat dengan `backupPayloadSchema` sebelum menyentuh IndexedDB.
+     - **Check 7 (Database writes validated):** Semua operasi mutasi (Faktur, Pengeluaran, Pelanggan, Produk, Pengaturan) divalidasi melalui Zod schema sebelum penulisan ke Dexie/IndexedDB.
+     - **Check 8 (No unsafe HTML rendering):** Bebas 100% dari penggunaan `dangerouslySetInnerHTML`. React secara default melakukan sanitasi & auto-escaping string sehingga payload XSS (misal `<img src=x onerror=...>`) dirender aman sebagai teks biasa.
+     - **Check 9 (No sensitive data unnecessarily logged):** Endpoint API hanya mencatat pesan ringkas error pada log internal tanpa membocorkan stack trace, struktur filesystem server, atau data sensitif pengguna.
+  4. **Suite Pengujian Otomatis E2E Keamanan ([`e2e/security-review.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/security-review.spec.ts)):**
+     - Skenario 1: Audit window client & inline script dari kebocoran service role key, admin password, dan session secret.
+     - Skenario 2: Verifikasi proteksi rute admin UI & API dengan penolakan 401 Unauthorized.
+     - Skenario 3: Pengujian validasi ketat payload `POST /api/license/activate` (empty body, short key, SQL injection string, non-POST 405).
+     - Skenario 4: Penolakan JSON backup korup, format tampered, atau versi masa depan.
+     - Skenario 5: Pengujian pencegahan injeksi XSS pada input pelanggan dan verifikasi tidak ada script yang tereksekusi di browser.
+     - Skenario 6: Verifikasi respons error API bersih tanpa stack trace atau kredensial rahasia.
+     - Skenario 7: Verifikasi kehadiran HTTP Security Headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`).
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 30 terpenuhi.
+  - Seluruh 7 skenario Playwright di `e2e/security-review.spec.ts` lulus 100% (`7 passed`).
+  - Seluruh 61 skenario pengujian Playwright E2E aplikasi lulus 100% (`61 passed`).
+  - Simulasi ESLint `lint-staged` pada seluruh file terdampak menghasilkan **Exit code 0** (0 errors).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 33. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1350,5 +1393,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | Selesai | Terverifikasi lokal |
 | **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | Selesai | Terverifikasi lokal |
 | **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | Selesai | Terverifikasi lokal |
-| **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | **Selesai** | Terverifikasi lokal |
-| **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | Selesai | Terverifikasi lokal |
+| **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | **Selesai** | Terverifikasi lokal |
+| **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | **Langkah Selanjutnya** | Menunggu instruksi |
