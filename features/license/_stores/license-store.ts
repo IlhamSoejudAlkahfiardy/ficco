@@ -64,6 +64,18 @@ export const useLicenseStore = create<LicenseStoreState>()(
       activateWithServer: async (rawLicenseKey: string) => {
         set({ isActivating: true, error: null, errorCode: null });
 
+        // Step 29: Immediate offline boundary check
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          const offlineMsg =
+            'Perangkat sedang offline. Sambungkan koneksi internet untuk memvalidasi kunci lisensi ke server.';
+          set({
+            isActivating: false,
+            error: offlineMsg,
+            errorCode: 'NETWORK_ERROR',
+          });
+          return { success: false, error: offlineMsg, code: 'NETWORK_ERROR' };
+        }
+
         const deviceFp =
           get().deviceFingerprint || getOrCreateDeviceFingerprint();
 
@@ -78,6 +90,21 @@ export const useLicenseStore = create<LicenseStoreState>()(
               deviceFingerprint: deviceFp,
             }),
           });
+
+          if (res.status === 503 || res.status === 502 || res.status === 504) {
+            const serverDownMsg =
+              'Server lisensi sedang tidak dapat dijangkau (maintenance atau gangguan sementara). Silakan coba beberapa saat lagi.';
+            set({
+              isActivating: false,
+              error: serverDownMsg,
+              errorCode: 'SERVER_UNAVAILABLE',
+            });
+            return {
+              success: false,
+              error: serverDownMsg,
+              code: 'SERVER_UNAVAILABLE',
+            };
+          }
 
           const data: ActivateLicenseResponse = await res.json().catch(() => ({
             success: false,
@@ -112,15 +139,15 @@ export const useLicenseStore = create<LicenseStoreState>()(
           }
 
           return { success: true, license: data.license };
-        } catch (err) {
+        } catch {
           const errMsg =
-            err instanceof Error ? err.message : 'Gangguan koneksi jaringan.';
+            'Tidak dapat terhubung ke server lisensi. Pastikan koneksi internet Anda aktif dan server dapat diakses.';
           set({
             isActivating: false,
             error: errMsg,
-            errorCode: 'DATABASE_ERROR',
+            errorCode: 'NETWORK_ERROR',
           });
-          return { success: false, error: errMsg, code: 'DATABASE_ERROR' };
+          return { success: false, error: errMsg, code: 'NETWORK_ERROR' };
         }
       },
     }),

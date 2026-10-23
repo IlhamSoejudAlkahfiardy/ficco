@@ -1282,7 +1282,43 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 31. Status Saat Ini & Langkah Berikutnya
+## 31. Pengerjaan Step 29 — Add Offline/Online Boundary Handling
+
+* **Tujuan:** Menetapkan batasan fungsional tegas antara operasi lokal (*Local features* yang selalu tersedia 100% di IndexedDB/Dexie tanpa internet) dan operasi server (*Server features* yang memerlukan jaringan serta menangani kegagalan dengan anggun/*graceful failure*), memenuhi kriteria penerimaan blueprint: *Offline business operations do not accidentally fail because the license server is unavailable.*
+* **Detail Implementasi:**
+  1. **Matriks Batasan Fitur Jaringan ([`shared/_constants/feature-boundaries.ts`](file:///D:/DOT%20Indonesia/Project/ficco/shared/_constants/feature-boundaries.ts)):**
+     - Mendefinisikan kontrak tegas `FEATURE_BOUNDARIES`:
+       - *Local features* (selalu tersedia offline): Invoices, Expenses, Customers, Products, Reports, Settings, Backup (Local Export & Restore), Local License State.
+       - *Server features* (memerlukan jaringan): License Activation (`POST /api/license/activate`), Future WhatsApp Backup.
+     - Menyediakan utilitas pembantu `requiresNetwork()`, diekspos melalui [`shared/index.ts`](file:///D:/DOT%20Indonesia/Project/ficco/shared/index.ts).
+  2. **Penanganan Error Offline & Server Down di License Store ([`features/license/_types/license.types.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_types/license.types.ts) & [`license-store.ts`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_stores/license-store.ts)):**
+     - Menambahkan error code `NETWORK_ERROR` dan `SERVER_UNAVAILABLE` ke `LicenseErrorCode`.
+     - Mengecek `!navigator.onLine` sebelum membuat HTTP request ke server aktivasi untuk mencegah freeze/unhandled error.
+     - Menangkap status HTTP 502/503/504 sebagai `SERVER_UNAVAILABLE` dan kegagalan fetch lainnya sebagai `NETWORK_ERROR`.
+  3. **Tampilan & Notifikasi Batasan Offline di UI Lisensi ([`features/license/_components/license-activation-view.tsx`](file:///D:/DOT%20Indonesia/Project/ficco/features/license/_components/license-activation-view.tsx)):**
+     - Mengintegrasikan `useShellStore.isOnline` untuk mendeteksi status jaringan perangkat secara reaktif.
+     - Menampilkan banner proaktif `license-offline-boundary-warning` jika pengguna membuka form aktivasi tanpa koneksi internet.
+     - Menampilkan banner kepastian `license-offline-assurance` ("Mode Offline Aktif — Lisensi Anda telah terverifikasi secara lokal") jika perangkat offline namun lisensi komersial telah aktif.
+     - Memberikan pesan error ramah dan instruktif saat aktivasi gagal karena kendala jaringan atau server offline/maintenance.
+  4. **Suite Pengujian Otomatis E2E Boundary Handling ([`e2e/offline-boundary.spec.ts`](file:///D:/DOT%20Indonesia/Project/ficco/e2e/offline-boundary.spec.ts)):**
+     - Skenario 1: Simulasi server lisensi down (HTTP 503) — membuktikan pembuatan invoice, pencatatan expense, penambahan pelanggan, dan komputasi laporan keuangan berjalan 100% lokal tanpa kegagalan.
+     - Skenario 2: Simulasi perangkat offline total (Mode Pesawat) — memastikan lisensi aktif tersimpan di IndexedDB dan banner assurance tampil jelas.
+     - Skenario 3: Peringatan batasan offline proaktif & kegagalan anggun saat submit di `/license` tanpa koneksi.
+     - Skenario 4: Penanganan server 503 downtime di `/license` dengan pesan deskriptif tanpa aplikasi mengalami crash.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 29 terpenuhi:
+    - Distinction between local features (IndexedDB) and server features.
+    - Offline business operations do not accidentally fail because the license server is unavailable.
+  - Seluruh 4 skenario Playwright di `e2e/offline-boundary.spec.ts` lulus 100% (`4 passed`).
+  - Seluruh 54 skenario pengujian Playwright E2E aplikasi lulus 100% (`54 passed`).
+  - Simulasi ESLint `lint-staged` pada seluruh file terdampak menghasilkan **Exit code 0** (0 errors).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 32. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1313,5 +1349,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 25** | Implement license list (List, Search, Used/unused filter, Copy license, Delete license, Toggle used state) | Selesai | Terverifikasi lokal |
 | **Step 26** | Implement customer license activation (Activation screen, lookup, reject used/missing, return success) | Selesai | Terverifikasi lokal |
 | **Step 27** | Implement local license state (Zustand license store, persist activation state, offline resilience) | Selesai | Terverifikasi lokal |
-| **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | **Selesai** | Terverifikasi lokal |
-| **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | Selesai | Terverifikasi lokal |
+| **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | **Selesai** | Terverifikasi lokal |
+| **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | **Langkah Selanjutnya** | Menunggu instruksi |

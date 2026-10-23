@@ -10,10 +10,12 @@ import {
   useActivateLicense,
 } from '@/features/license';
 import { Icons, CopyIcon } from '@/shared/_components/icons';
+import { useShellStore } from '@/shared/_hooks/use-shell-store';
 
 export function LicenseActivationView() {
   const [copiedKey, setCopiedKey] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+  const isOnline = useShellStore((state) => state.isOnline);
 
   const searchParams = useSearchParams();
   const rawFrom = searchParams.get('from');
@@ -102,9 +104,11 @@ export function LicenseActivationView() {
             <Icons.shield size={12} />
             <span>Step 26: Customer License Activation</span>
             <span className="text-slate-300 dark:text-zinc-600">|</span>
-            <span>Step 27: Local License State</span>
+            <span>Step 27: Local State</span>
             <span className="text-slate-300 dark:text-zinc-600">|</span>
-            <span>Step 28: Protect Application Access</span>
+            <span>Step 28: Protected Access</span>
+            <span className="text-slate-300 dark:text-zinc-600">|</span>
+            <span>Step 29: Offline Boundary</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Aktivasi Lisensi Perangkat
@@ -129,6 +133,32 @@ export function LicenseActivationView() {
           )}
         </div>
       </div>
+
+      {/* Step 29: Offline/Online Boundary Status Alerts */}
+      {!isOnline && !isCurrentlyActive && (
+        <div
+          data-testid="license-offline-boundary-warning"
+          className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs sm:text-sm animate-in fade-in"
+        >
+          <Icons.wifiOff size={18} className="shrink-0 text-amber-500 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-semibold">Perangkat Sedang Offline</span>
+            <p className="leading-relaxed opacity-90">
+              Aktivasi lisensi baru adalah satu-satunya operasi MVP yang memerlukan koneksi internet ke server. Seluruh operasional bisnis lokal lainnya tetap berjalan bebas tanpa internet.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isOnline && isCurrentlyActive && (
+        <div
+          data-testid="license-offline-assurance"
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-medium"
+        >
+          <Icons.wifiOff size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>Mode Offline Aktif — Lisensi Anda telah terverifikasi secara lokal. Anda bebas membuat invoice dan mencatat pengeluaran tanpa internet.</span>
+        </div>
+      )}
 
       {/* Redirect Notice if routed from protected area */}
       {redirectFrom && !isCurrentlyActive && (
@@ -293,12 +323,21 @@ export function LicenseActivationView() {
                     ? 'Kunci Lisensi Tidak Ditemukan'
                     : errorCode === 'INVALID_FORMAT'
                     ? 'Format Kunci Tidak Sesuai'
+                    : errorCode === 'NETWORK_ERROR'
+                    ? 'Gagal Menghubungi Server Lisensi (Offline)'
+                    : errorCode === 'SERVER_UNAVAILABLE'
+                    ? 'Server Lisensi Tidak Dapat Dijangkau'
                     : 'Aktivasi Gagal'}
                 </span>
                 <p className="text-xs opacity-90 leading-relaxed">{error}</p>
                 {errorCode === 'ALREADY_USED' && (
                   <p className="text-xs text-rose-500 dark:text-rose-400/80 mt-1">
                     Kunci lisensi Ficco bersifat single-device. Silakan hubungi admin jika Anda telah berpindah perangkat.
+                  </p>
+                )}
+                {(errorCode === 'NETWORK_ERROR' || errorCode === 'SERVER_UNAVAILABLE') && (
+                  <p className="text-xs text-rose-500 dark:text-rose-400/80 mt-1">
+                    Seluruh fitur bisnis lokal (faktur, pengeluaran, laporan) tetap beroperasi normal jika perangkat ini sebelumnya sudah teraktivasi. Server hanya dibutuhkan saat memvalidasi kunci lisensi baru.
                   </p>
                 )}
               </div>

@@ -7,6 +7,7 @@ export * from './_components/shell/mobile-nav';
 export * from './_components/shell/bottom-nav';
 export * from './_components/select';
 export * from './_constants/navigation';
+export * from './_constants/feature-boundaries';
 export * from './_hooks/use-shell-store';
 export * from './_hooks/use-theme';
 export * from './_components/pwa';

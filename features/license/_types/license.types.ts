@@ -30,7 +30,9 @@ export type LicenseErrorCode =
   | 'ALREADY_USED'
   | 'INVALID_FORMAT'
   | 'DATABASE_ERROR'
-  | 'SERVER_MISCONFIGURED';
+  | 'SERVER_MISCONFIGURED'
+  | 'NETWORK_ERROR'
+  | 'SERVER_UNAVAILABLE';
 
 export interface LicenseValidationResult {
   valid: boolean;
