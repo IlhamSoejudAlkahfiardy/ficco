@@ -104,7 +104,7 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({
 
         {/* Quick Action: Buat Faktur */}
         <Link
-          href="/invoices/create"
+          href="/invoices/new"
           className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-xs shadow-blue-500/20"
         >
           <Icons.plus size={15} />

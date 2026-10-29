@@ -85,14 +85,14 @@ export const SettingsView: React.FC = () => {
       {/* Main Tabs Card */}
       <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-xs overflow-hidden">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-zinc-800 px-6 pt-3 bg-slate-50/50 dark:bg-zinc-800/30 gap-6">
+        <div className="flex border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-6 pt-3 bg-slate-50/50 dark:bg-zinc-800/30 gap-4 sm:gap-6 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
             type="button"
             onClick={() => {
               clearMessage();
               setActiveTab('profile');
             }}
-            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'profile'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -106,7 +106,7 @@ export const SettingsView: React.FC = () => {
               clearMessage();
               setActiveTab('invoice');
             }}
-            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'invoice'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -120,7 +120,7 @@ export const SettingsView: React.FC = () => {
               clearMessage();
               setActiveTab('data-management');
             }}
-            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'data-management'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -134,7 +134,7 @@ export const SettingsView: React.FC = () => {
               clearMessage();
               setActiveTab('pwa');
             }}
-            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+            className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'pwa'
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'

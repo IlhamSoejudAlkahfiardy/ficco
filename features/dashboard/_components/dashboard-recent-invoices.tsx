@@ -119,7 +119,7 @@ export const DashboardRecentInvoices: React.FC<DashboardRecentInvoicesProps> = (
               Buat faktur penagihan pertama untuk mulai melacak pendapatan Anda.
             </p>
             <Link
-              href="/invoices/create"
+              href="/invoices/new"
               className="mt-3 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               + Buat Faktur

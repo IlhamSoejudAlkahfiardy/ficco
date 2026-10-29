@@ -1387,7 +1387,47 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 34. Status Saat Ini & Langkah Berikutnya
+## 34. Pengerjaan Step 32 — Responsive QA
+
+* **Tujuan:** Memvalidasi antarmuka dan interaksi responsif pada seluruh peranti (Desktop Chrome/Edge, Android Chrome, iOS Safari, dan Tablet iPad) dengan fokus ketat pada 7 area spesifikasi Step 32 PRD Blueprint (`docs/invoice-expense-prd-blueprint.md`):
+  1. **Invoice Form** (Formulir pembuatan faktur, baris item dinamis, kalkulator diskon/pajak, preview pelanggan)
+  2. **Invoice Table** (Tabel desktop vs Card view mobile, badges status, quick payment & PDF actions)
+  3. **Expense Form** (Modal dialog pengeluaran, input tanggal, nominal currency, pemilihan kategori & metode bayar)
+  4. **Dashboard** (Grid metrik KPI eksekutif, tombol aksi cepat, tren grafik komparasi, daftar mutasi terkini)
+  5. **Reports** (Navigasi tab laporan, pemilih rentang tanggal, grafik Recharts adaptif, tabel berkala scrollable)
+  6. **Settings** (Navigasi tab profil usaha, default penomoran faktur, data management, pengaturan PWA)
+  7. **Backup/Import UI** (Banner zero-knowledge, kartu metrik 3 kolom, dropzone unggah JSON, dialog konfirmasi atomik)
+
+* **Detail Implementasi & Optimasi Responsif:**
+  1. **Perbaikan Tautan & Navigasi Cepat Dasbor:**
+     - Memperbaiki tautan tombol "+ Faktur Baru" dan "Buat Faktur" pada [`features/dashboard/_components/dashboard-quick-actions.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-quick-actions.tsx) dan [`features/dashboard/_components/dashboard-recent-invoices.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/dashboard/_components/dashboard-recent-invoices.tsx) dari `/invoices/create` menjadi `/invoices/new` yang sah.
+  2. **Penyempurnaan Navigasi Tab Horizontal Peramban Seluler:**
+     - Menerapkan utilitas `overflow-x-auto whitespace-nowrap scrollbar-none` dan `shrink-0` pada tombol tab di:
+       - [`features/settings/_components/settings-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/settings/_components/settings-view.tsx)
+       - [`features/reports/_components/reports-filter-bar.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/reports/_components/reports-filter-bar.tsx)
+       - [`features/backup/_components/data-management-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/backup/_components/data-management-view.tsx)
+     - Mencegah terjadinya *text clipping* atau pemotongan baris canggung pada layar ponsel kompak (lebar 360px–390px).
+  3. **Responsivitas Tombol Aksi Formulir Faktur:**
+     - Menyesuaikan header action bar pada [`features/invoices/_components/invoice-create-view.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/features/invoices/_components/invoice-create-view.tsx) dengan `flex-wrap gap-2 sm:gap-3` serta membersihkan variabel terdestrukturisasi yang tidak terpakai sehingga linting 100% bersih tanpa peringatan.
+  4. **Stabilitas Kompilasi & Build Produksi Windows:**
+     - Mengonfigurasi skrip `build` dan `dev` di [`package.json`](file:///d:/DOT%20Indonesia/Project/ficco/package.json) dengan `--webpack` untuk mencegah Turbopack panic pada sistem operasi Windows yang memproses CSS Tailwind v4.
+     - Menyesuaikan [`playwright.config.ts`](file:///d:/DOT%20Indonesia/Project/ficco/playwright.config.ts) dengan webServer `pnpm run start` memanfaatkan artefak pra-kompilasi produksi berkecepatan tinggi (~800ms startup).
+  5. **Suite Pengujian Otomatis E2E Responsif Komprehensif ([`e2e/responsive-qa.spec.ts`](file:///d:/DOT%20Indonesia/Project/ficco/e2e/responsive-qa.spec.ts)):**
+     - **Desktop Chrome / Edge (1280x800):** Memvalidasi visibilitas Desktop Sidebar, sembunyinya BottomNav, grid multi-kolom Dasbor, tabel faktur tabular desktop (`th`/`td`), formulir faktur 2 kolom, modal pengeluaran terpusat, 4 metrik laporan, 4 tab pengaturan, serta kartu ekspor/impor cadangan.
+     - **Android Chrome (412x915 / Pixel 7):** Memvalidasi transisi Desktop Sidebar ke sembunyi, kehadiran Mobile Bottom Navigation (`BottomNav`), pembukaan/penutupan laci navigasi hamburger (`MobileNav`), peralihan tabel faktur ke tampilan kartu seluler (`md:hidden`), formulir faktur menumpuk 1 kolom vertikal, modal pengeluaran dengan scrollbar internal `max-h-[92vh]`, tab laporan & pengaturan scrollable, serta kartu aksi cadangan.
+     - **iOS Safari (390x844 / iPhone 14):** Mengevaluasi integritas dokumen bebas dari kebocoran horizontal (`document.documentElement.scrollWidth <= window.innerWidth`) di 7 rute utama (`/dashboard`, `/invoices`, `/invoices/new`, `/expenses`, `/reports`, `/settings`, `/backup`), peralihan mulus rute melalui BottomNav, serta pembukaan drawer dari tombol "More".
+     - **Tablet iPad (768x1024):** Memverifikasi mekanisme ciutkan/lebarkan sidebar desktop (`w-64` ↔ `w-20`), adaptasi grid dasbor 2 kolom, dan kestabilan layout tablet.
+
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 32 terpenuhi.
+  - Seluruh 25 skenario Playwright di `e2e/responsive-qa.spec.ts` lulus 100% (`25 passed`, 45.7s).
+  - Simulasi ESLint `lint-staged` pada seluruh file terdampak menghasilkan **Exit code 0** (0 errors, 0 warnings).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 35. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1421,5 +1461,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 28** | Protect application access (Gate app routes based on local activation, trial or commercial lock) | Selesai | Terverifikasi lokal |
 | **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | Selesai | Terverifikasi lokal |
 | **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | Selesai | Terverifikasi lokal |
-| **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | **Selesai** | Terverifikasi lokal |
-| **Step 32** | Responsive QA (desktop, tablet, mobile layouts & touch controls verification) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | Selesai | Terverifikasi lokal |
+| **Step 32** | Responsive QA (desktop, tablet, mobile layouts & touch controls verification) | **Selesai** | Terverifikasi lokal |
+| **Step 33** | Production deployment (Vercel deployment, environment variables, production database) | **Langkah Selanjutnya** | Menunggu instruksi |

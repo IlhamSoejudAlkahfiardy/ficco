@@ -99,11 +99,11 @@ export const ReportsFilterBar: React.FC<ReportsFilterBarProps> = ({
       {/* 2. Sub-Bar: Navigation Tabs & Date Range Filter */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-2 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-2xs">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-zinc-800/60 rounded-xl">
+        <div className="flex items-center gap-1 p-1 bg-slate-100/80 dark:bg-zinc-800/60 rounded-xl overflow-x-auto whitespace-nowrap scrollbar-none max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('profit_loss')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all shrink-0 ${
               activeTab === 'profit_loss'
                 ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs'
                 : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -114,7 +114,7 @@ export const ReportsFilterBar: React.FC<ReportsFilterBarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('revenue')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all shrink-0 ${
               activeTab === 'revenue'
                 ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs'
                 : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -125,7 +125,7 @@ export const ReportsFilterBar: React.FC<ReportsFilterBarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('expenses')}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all shrink-0 ${
               activeTab === 'expenses'
                 ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs'
                 : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'

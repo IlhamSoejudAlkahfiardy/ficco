@@ -318,11 +318,11 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* 4. Action Segment Controller */}
-      <div className="flex border-b border-slate-200 dark:border-zinc-800 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-zinc-800 gap-4 sm:gap-6 overflow-x-auto whitespace-nowrap scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveSegment('all')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
             activeSegment === 'all'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -333,7 +333,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveSegment('export')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
             activeSegment === 'export'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'
@@ -344,7 +344,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveSegment('import')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all cursor-pointer shrink-0 ${
             activeSegment === 'import'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-zinc-200'

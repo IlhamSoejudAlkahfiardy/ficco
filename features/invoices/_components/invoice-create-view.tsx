@@ -20,8 +20,6 @@ export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId })
   const {
     register,
     control,
-    handleSubmit,
-    setValue,
     watch,
     errors,
     fields,
@@ -41,9 +39,6 @@ export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId })
     selectedCustomer,
     refreshCustomers,
     watchedItems,
-    watchedDiscount,
-    watchedIssueDate,
-    watchedDueDate,
     watchedStatus,
     totals,
     isNewCustomerModalOpen,
@@ -121,7 +116,7 @@ export const InvoiceCreateView: React.FC<InvoiceFormViewProps> = ({ invoiceId })
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {isDevelopmentMode() && !isEditMode && (
             <button
               type="button"
