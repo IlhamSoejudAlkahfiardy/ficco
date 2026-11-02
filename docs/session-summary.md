@@ -1427,7 +1427,44 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 
 ---
 
-## 35. Status Saat Ini & Langkah Berikutnya
+## 35. Pengerjaan Step 33 — Production Deployment
+
+* **Tujuan Fitur:** Menyiapkan dan memverifikasi kesiapan deployment produksi aplikasi Next.js ke Vercel dengan HTTPS standar industri, header keamanan ketat (HSTS, CSP, X-Frame-Options), metadata PWA production-ready, konfigurasi variabel lingkungan terisolasi, skema database lisensi Supabase produksi, serta memastikan arsitektur *Zero-Knowledge Server / Local-First* tetap terjaga secara mutlak tanpa endpoint data bisnis pada server.
+* **Detail Implementasi:**
+  1. **Konfigurasi Vercel & HTTP Security Headers:**
+     - Membuat konfigurasi deployment Vercel di [`vercel.json`](file:///d:/DOT%20Indonesia/Project/ficco/vercel.json) dengan `framework: "nextjs"` dan `cleanUrls: true`.
+     - Memperbarui [`next.config.ts`](file:///d:/DOT%20Indonesia/Project/ficco/next.config.ts) dengan header keamanan produksi:
+       - `Strict-Transport-Security` (`max-age=63072000; includeSubDomains; preload`).
+       - `X-Frame-Options: SAMEORIGIN` dan `X-Content-Type-Options: nosniff`.
+       - `Referrer-Policy: strict-origin-when-cross-origin`.
+       - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+       - Header kontrol cache aset statis & PWA: `/sw.js` (`no-cache, no-store, must-revalidate`), `/manifest.webmanifest`, dan `/manifest.json`.
+  2. **PWA Metadata & Service Worker Precache:**
+     - Memperbarui Service Worker [`public/sw.js`](file:///d:/DOT%20Indonesia/Project/ficco/public/sw.js) ke versi `v1.0.3` dan menambahkan `/manifest.webmanifest` ke daftar precache offline.
+     - Memastikan seluruh ukuran ikon PWA (192x192, 512x512, apple-touch, maskable) tersedia dan dapat diakses dengan respons status HTTP 200.
+  3. **Panduan Operasional & Dokumentasi Variabel Lingkungan Produksi:**
+     - Menyusun panduan operasional deployment lengkap di [`docs/production-deployment-guide.md`](file:///d:/DOT%20Indonesia/Project/ficco/docs/production-deployment-guide.md) yang merinci langkah setup Vercel, Supabase SQL migration, checklist variabel lingkungan, serta audit pasca-deployment.
+     - Menyediakan contoh variabel lingkungan produksi di `.env.production.example` (`DEVELOPMENT=FALSE`, `NEXT_PUBLIC_DEVELOPMENT=FALSE`, Supabase service role keys, dan admin auth credentials).
+  4. **Penyelarasan Port Server Pengujian:**
+     - Memperbarui skrip `start` di [`package.json`](file:///d:/DOT%20Indonesia/Project/ficco/package.json) menjadi `next start -p 3001` agar selaras dengan port default runner Playwright.
+     - Menambahkan atribut `data-testid="mobile-nav-drawer"` pada [`shared/_components/shell/mobile-nav.tsx`](file:///d:/DOT%20Indonesia/Project/ficco/shared/_components/shell/mobile-nav.tsx) untuk memastikan ketahanan selektor pengetesan end-to-end terhadap Next.js internal indicators.
+  5. **Suite Pengujian Otomatis E2E Kesiapan Produksi ([`e2e/production-deployment.spec.ts`](file:///d:/DOT%20Indonesia/Project/ficco/e2e/production-deployment.spec.ts)):**
+     - **Verifikasi Zero Business Data API Server:** Memvalidasi bahwa probe request ke `/api/invoices`, `/api/expenses`, `/api/customers`, `/api/products`, `/api/reports`, `/api/companies`, dan `/api/payments` mengembalikan status HTTP 404, serta pencatatan pelanggan di antarmuka web menghasilkan 0 panggilan API server bisnis.
+     - **Verifikasi Konfigurasi Produksi & Vercel:** Memeriksa keberadaan file `vercel.json`, template `.env.production.example`, serta migrasi Supabase RLS `licenses`.
+     - **Verifikasi Header Keamanan & HTTPS:** Memvalidasi keberadaan header `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, dan `Referrer-Policy` pada respons HTTP.
+     - **Verifikasi Metadata PWA & Pengiriman Aset:** Memvalidasi responsibilitas manifest PWA, Service Worker (`sw.js`), dan ketersediaan file aset ikon.
+     - **Verifikasi Kontrak Endpoint Lisensi:** Menguji endpoint health check lisensi (`/api/license/health`) dan validasi penolakan format lisensi yang tidak valid (`/api/license/activate`).
+     - **Verifikasi App Shell & Offline Fallback:** Memastikan halaman fallback offline (`/offline`) dan routing shell aplikasi produksi berfungsi tanpa galat.
+* **Status & Hasil:**
+  - 100% Kriteria Penerimaan Step 33 terpenuhi.
+  - Seluruh 6 pengujian pada `e2e/production-deployment.spec.ts` dan 102 total skenario Playwright pada proyek lulus 100% (`102 passed`).
+  - Simulasi ESLint `lint-staged` pada file terdampak menghasilkan **Exit code 0** (0 errors, 0 warnings).
+  - Validasi tipe TypeScript (`tsc --noEmit`) menghasilkan **Exit code 0** (0 errors).
+  - Production build Next.js (`pnpm run build`) berhasil 100% (25 routes sukses terkompilasi, 0 errors).
+
+---
+
+## 36. Status Saat Ini & Langkah Berikutnya
 
 | Tahap | Deskripsi | Status | Git Commit |
 | :--- | :--- | :---: | :--- |
@@ -1462,5 +1499,6 @@ Saat pengguna menguji aplikasi di smartphone melalui Ngrok tunnel, ditemukan dua
 | **Step 29** | Add offline/online boundary handling (Distinction between local features and server features) | Selesai | Terverifikasi lokal |
 | **Step 30** | Security review (Zero-knowledge verification, environment variables isolation, admin security) | Selesai | Terverifikasi lokal |
 | **Step 31** | Data integrity review (Storage persistence, large dataset, import malformed schema, transactional restore) | Selesai | Terverifikasi lokal |
-| **Step 32** | Responsive QA (desktop, tablet, mobile layouts & touch controls verification) | **Selesai** | Terverifikasi lokal |
-| **Step 33** | Production deployment (Vercel deployment, environment variables, production database) | **Langkah Selanjutnya** | Menunggu instruksi |
+| **Step 32** | Responsive QA (desktop, tablet, mobile layouts & touch controls verification) | Selesai | Terverifikasi lokal |
+| **Step 33** | Production deployment (Vercel deployment, environment variables, production database) | **Selesai** | Terverifikasi lokal |
+| **Step 34** | Production license testing (Verify live activation, device lock in production) | **Langkah Selanjutnya** | Menunggu instruksi |

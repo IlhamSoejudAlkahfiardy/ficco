@@ -60,15 +60,13 @@ test.describe('Step 32: Responsive QA', () => {
       await page.goto('/invoices');
       await page.waitForLoadState('networkidle');
 
-      // On desktop, the table header row should be visible (if invoices exist or container rendered)
+      // Wait for async Dexie query to finish and either table or empty state to render
       const desktopTable = page.locator('table');
       const emptyState = page.getByText('Belum Ada Faktur').or(page.getByText('Faktur Tidak Ditemukan'));
 
+      await expect(desktopTable.or(emptyState).first()).toBeVisible({ timeout: 10000 });
+
       const hasTable = await desktopTable.isVisible().catch(() => false);
-      const isEmpty = await emptyState.first().isVisible().catch(() => false);
-
-      expect(hasTable || isEmpty).toBeTruthy();
-
       if (hasTable) {
         // Table columns must be visible
         await expect(page.locator('th', { hasText: 'Nomor Faktur' })).toBeVisible();
@@ -192,13 +190,13 @@ test.describe('Step 32: Responsive QA', () => {
       await hamburgerBtn.click();
 
       // Drawer should now be visible
-      const drawer = page.locator('div[aria-hidden="false"]');
+      const drawer = page.getByTestId('mobile-nav-drawer');
       await expect(drawer).toBeVisible();
 
       // Close drawer with Close button
       const closeDrawerBtn = page.locator('button[aria-label="Close menu"]');
       await closeDrawerBtn.click();
-      await expect(page.locator('div[aria-hidden="true"]')).toBeVisible();
+      await expect(page.getByTestId('mobile-nav-drawer')).toBeHidden();
     });
 
     test('Test 2.2: Mobile Invoice List / Cards and Actions', async ({ page }) => {
@@ -392,7 +390,7 @@ test.describe('Step 32: Responsive QA', () => {
       await moreBtn.click();
 
       // MobileNav drawer should appear
-      const drawer = page.locator('div[aria-hidden="false"]');
+      const drawer = page.getByTestId('mobile-nav-drawer');
       await expect(drawer).toBeVisible();
 
       // Navigate to Settings from Drawer

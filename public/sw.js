@@ -1,13 +1,14 @@
 // Ficco PWA Service Worker — Offline Shell & Asset Caching
-// Version: 1.0.1
+// Version: 1.0.3
 
-const CACHE_VERSION = 'v1.0.2';
+const CACHE_VERSION = 'v1.0.3';
 const STATIC_CACHE = `ficco-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `ficco-pages-${CACHE_VERSION}`;
 
 // Pre-cache core offline fallback & branding assets
 const PRECACHE_ASSETS = [
   '/offline',
+  '/manifest.webmanifest',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-192x192.png',

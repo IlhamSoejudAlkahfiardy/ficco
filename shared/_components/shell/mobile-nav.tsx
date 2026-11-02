@@ -55,6 +55,7 @@ export const MobileNav: React.FC = () => {
 
   return (
     <div
+      data-testid="mobile-nav-drawer"
       className={`fixed inset-0 z-50 md:hidden transition-all duration-300 ${
         isMobileNavOpen ? 'visible pointer-events-auto' : 'invisible pointer-events-none'
       }`}

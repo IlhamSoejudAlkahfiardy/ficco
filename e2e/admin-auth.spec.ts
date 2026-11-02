@@ -34,7 +34,7 @@ test.describe('Step 22: Admin Authentication & Protected Route Gate', () => {
     await page.getByRole('button', { name: /Masuk ke Admin Portal/i }).click();
 
     // 3. Verify error message
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /Autentikasi Gagal/i })).toBeVisible();
     await expect(page.getByText(/Autentikasi Gagal|Username atau password salah/i)).toBeVisible();
   });
 
